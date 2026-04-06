@@ -6,6 +6,6 @@ Task cần làm:
 Tham khảo thêm nếu cần:
 https://www.youtube.com/watch?v=FRlqMJWlpTI
 
-Code hiện tại có thể chạy bằng live-server
+Code hiện tại có thể chạy bằng live-server / (vscode / visual studio)
 
 ![demo](demo.png)
