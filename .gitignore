@@ -1,0 +1,32 @@
+## Visual Studio Temp Files and Build Results
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docattachments
+
+## Visual Studio 2015+ Cache/Settings
+.vs/
+[Tt]est[Rr]esult*/
+
+## User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docattachments
+
+## SQL Server files (Tránh đẩy database cá nhân lên)
+*.mdf
+*.ldf
+*.ndf
+
+## CSV files (Nếu bạn muốn giữ lại file data.csv thì xóa dòng này)
+# *.csv
+
+## Publish folders
+[Pp]ublish/
+
+## NuGet Packages
+*.nupkg
+# Restore packages are usually handled by the IDE
+packages/
