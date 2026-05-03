@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Profile</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+      .profile-avatar{ width:160px; height:160px; border-radius:50%; overflow:hidden; border:6px solid #fff; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+      .profile-header{ max-width:980px; margin:18px auto; }
+      .profile-card{ max-width:980px; margin:0 auto; }
+      .field-label{ font-weight:600; }
+    </style>
+  </head>
+  <body>
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-start mb-3 profile-header">
+        <div>
+          <a href="index.html" class="btn btn-primary">← Back</a>
+        </div>
+      </div>
+
+      <div class="card shadow-sm profile-card">
+        <div class="card-body">
+          <div class="row g-4">
+            <div class="col-md-4 text-center">
+              <div class="profile-avatar mx-auto mb-3">
+                <!-- Embedded SVG default avatar -->
+                <img alt="default avatar" src='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="%230ea5e9"/><stop offset="1" stop-color="%237c3aed"/></linearGradient></defs><rect width="100%" height="100%" fill="url(%23g)"/><g transform="translate(40,36)"><circle cx="60" cy="44" r="34" fill="rgba(255,255,255,0.15)"/><path d="M8 132c0-26 22-48 52-48s52 22 52 48" fill="rgba(255,255,255,0.18)"/><circle cx="60" cy="44" r="28" fill="white" opacity="0.14"/></g></svg>' style="width:100%;height:100%;object-fit:cover;">
+              </div>
+              <h4 class="mb-0">John Doe</h4>
+              <div class="text-muted">Administrator</div>
+            </div>
+
+            <div class="col-md-8">
+              <h5 class="fw-bold mb-3">Account</h5>
+              <form>
+                <div class="mb-3 row">
+                  <label class="col-sm-4 col-form-label field-label">Name</label>
+                  <div class="col-sm-8"><input class="form-control" value="John Doe" readonly></div>
+                </div>
+                <div class="mb-3 row">
+                  <label class="col-sm-4 col-form-label field-label">Age</label>
+                  <div class="col-sm-8"><input class="form-control" value="34" type="number" min="0" readonly></div>
+                </div>
+                <div class="mb-3 row">
+                  <label class="col-sm-4 col-form-label field-label">Gender</label>
+                  <div class="col-sm-8">
+                    <select class="form-select" disabled aria-disabled="true">
+                      <option selected>Male</option>
+                      <option>Female</option>
+                      <option>Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="mb-3 row">
+                  <label class="col-sm-4 col-form-label field-label">Phone number</label>
+                  <div class="col-sm-8"><input class="form-control" value="+1 555-123-4567" readonly></div>
+                </div>
+                <div class="mb-3 row">
+                  <label class="col-sm-4 col-form-label field-label">Email Address</label>
+                  <div class="col-sm-8"><input class="form-control" value="john@example.com" type="email" readonly></div>
+                </div>
+              </form>
+
+              <div class="mt-4">
+                <a href="#" class="btn btn-danger">Logout</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+

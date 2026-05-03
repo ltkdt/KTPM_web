@@ -88,23 +88,62 @@
 					<div id="detailPanel" class="detail-panel">
 						<div class="detail-card shadow-sm">
 							<button id="detailClose" class="btn-close" aria-label="Close"></button>
-							<div class="circle-outer">
-								<div class="circle-inner">
-									<div id="bpmValue" class="bpm">60.3 bpm</div>
+							<div class="d-flex justify-content-center gap-3 my-3">
+								<div class="text-center">
+									<div class="detail-label text-muted large">Heart rate</div>
+									<div class="circle-outer">
+										<div class="circle-inner">
+											<div id="bpmValue" class="bpm">60.3 bpm</div>
+										</div>
+									</div>
+								</div>
+								<div class="text-center">
+									<div class="detail-label text-muted large">RMSSD</div>
+									<div class="circle-outer2">
+										<div class="circle-inner2">
+											<div id="rmssdValue" class="bpm2">35.8 ms</div>
+										</div>
+									</div>
 								</div>
 							</div>
 							<div class="detail-meta text-center text-muted mt-2" id="detailMeta">ecg_record_1.json</div>
-							<canvas id="detailChart" width="600" height="240" style="max-width:100%;"></canvas>
+									<canvas id="detailChart" width="600" height="240" style="max-width:100%;"></canvas>
+									<!-- clinical notes boxes -->
+									<div class="mt-3 w-100">
+										<div class="row g-3">
+											<div class="col-12">
+												<label class="form-label small text-muted">Complaint</label>
+												<textarea id="complaintInput" class="form-control" style="height:140px;">Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường.</textarea>
+											</div>
+											<div class="col-12">
+												<label class="form-label small text-muted">Findings</label>
+												<textarea id="findingsInput" class="form-control" style="height:140px;">Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường.</textarea>
+											</div>
+											<div class="col-12">
+												<label class="form-label small text-muted">Treatment Plan</label>
+												<textarea id="treatmentInput" class="form-control" style="height:140px;">Khuyến nghị nghỉ ngơi và theo dõi thêm. Uống đủ nước, điều chỉnh cường độ tập luyện phù hợp. Nếu triệu chứng tái diễn hoặc kèm đau ngực/chóng mặt, cần tái khám để làm thêm các xét nghiệm (ECG gắng sức, siêu âm tim).</textarea>
+											</div>
+											<div class="col-12">
+												<label class="form-label small text-muted">Doctor</label>
+												<input id="doctorInput" class="form-control" value="Jane Doe">
+											</div>
+										</div>
+									</div>
 						</div>
-					</div>
-				</td>
-			`;
+						</div>
+					</td>
+				`;
 		}
 
 		// return element references
 		return {
 			panel: detailContainer.querySelector('#detailPanel') || document.getElementById('detailPanel'),
 			bpm: detailContainer.querySelector('#bpmValue') || document.getElementById('bpmValue'),
+			rmssd: detailContainer.querySelector('#rmssdValue') || document.getElementById('rmssdValue'),
+			complaint: detailContainer.querySelector('#complaintInput') || document.getElementById('complaintInput'),
+			findings: detailContainer.querySelector('#findingsInput') || document.getElementById('findingsInput'),
+			treatment: detailContainer.querySelector('#treatmentInput') || document.getElementById('treatmentInput'),
+			doctor: detailContainer.querySelector('#doctorInput') || document.getElementById('doctorInput'),
 			meta: detailContainer.querySelector('#detailMeta') || document.getElementById('detailMeta'),
 			closeBtn: detailContainer.querySelector('#detailClose') || document.getElementById('detailClose'),
 			canvas: detailContainer.querySelector('#detailChart') || document.getElementById('detailChart')
@@ -127,6 +166,12 @@
 
 		// default value (could be replaced by real measurement)
 		elems.bpm.textContent = '60.3 bpm';
+		elems.rmssd.textContent = '35.8 ms';
+		// set clinical notes defaults (ensure textareas keep provided defaults)
+		if(elems.complaint) elems.complaint.value = elems.complaint.value || 'Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường.';
+		if(elems.findings) elems.findings.value = elems.findings.value || 'Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường.';
+		if(elems.treatment) elems.treatment.value = elems.treatment.value || 'Khuyến nghị nghỉ ngơi và theo dõi thêm. Uống đủ nước, điều chỉnh cường độ tập luyện phù hợp. Nếu triệu chứng tái diễn hoặc kèm đau ngực/chóng mặt, cần tái khám để làm thêm các xét nghiệm (ECG gắng sức, siêu âm tim).';
+		if(elems.doctor) elems.doctor.value = elems.doctor.value || 'Jane Doe';
 		elems.meta.textContent = rec.name;
 
 		// prepare and render chart: x axis is 1000 samples at 250Hz (4s), y from csv 'oi' column

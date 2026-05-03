@@ -55,6 +55,12 @@ header h1{
 	top: 10px;
 }
 
+/* make the detail labels bold */
+.detail-label.bold,
+.detail-label.bold.large {
+  font-weight: 700;
+}
+
 /* Constrain chart size so Chart.js doesn't stretch it to fill container */
 .detail-card canvas{
     width: 100% !important;
@@ -96,8 +102,52 @@ header h1{
 	font-weight: 600;
 }
 
+.circle-outer2 {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Soft mint outer glow */
+    background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.15), rgba(0, 0, 0, 0));
+    box-shadow: 0 6px 18px rgba(6, 78, 59, 0.08);
+}
+
+.circle-inner2 {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Gradient from Emerald to Deep Teal */
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    /* Updated shadow to match the green theme */
+    box-shadow: 0 8px 30px rgba(16, 185, 129, 0.25);
+    position: relative;
+}
+
+.circle-inner2::after {
+    content: '';
+    position: absolute;
+    left: -18px; top: -18px; right: -18px; bottom: -18px;
+    border-radius: 50%;
+    /* Subtle green halo effect */
+    background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.18), rgba(5, 150, 105, 0.12));
+    z-index: -1;
+}
+
+.bpm2 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
 @media (max-width:520px){
 	.circle-outer{ width:120px; height:120px }
 	.circle-inner{ width:92px; height:92px }
+	.circle-outer2{ width:120px; height:120px }
+	.circle-inner2{ width:92px; height:92px }
 }
 
