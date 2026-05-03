@@ -8,4 +8,6 @@ https://www.youtube.com/watch?v=FRlqMJWlpTI
 
 Code hiện tại có thể chạy bằng live-server / (vscode / visual studio)
 
+Hiện tại đã có thêm frontend app WPF (HRMonitor)
+
 ![demo](demo.png)
