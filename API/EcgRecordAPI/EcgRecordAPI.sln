@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EcgRecordAPI", "EcgRecordAPI.csproj", "{F2512C44-E9C1-45CB-91B2-9CF583766390}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2512C44-E9C1-45CB-91B2-9CF583766390}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2512C44-E9C1-45CB-91B2-9CF583766390}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2512C44-E9C1-45CB-91B2-9CF583766390}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2512C44-E9C1-45CB-91B2-9CF583766390}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EA9FC8BD-8C5F-4D81-B330-57B94B85BBD7}
+	EndGlobalSection
+EndGlobal
