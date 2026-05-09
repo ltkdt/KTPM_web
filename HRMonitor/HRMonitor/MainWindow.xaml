@@ -360,7 +360,7 @@
                     </Grid>
                     
                     <!-- Submit Button -->
-                    <Button Grid.Row="4" Content="Submit" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,20,0,0" Padding="30,10"/>
+                    <Button Grid.Row="4" Content="Submit" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,20,0,0" Padding="30,10" Click="SubmitFeedback_Click"/>
                 </Grid>
             </Border>
         </Grid>

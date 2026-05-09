@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -14,22 +14,138 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
 using ScottPlot;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
+
+using Microsoft.AspNetCore.SignalR.Client;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+
 
 namespace HRMonitor
 {
     public partial class MainWindow : Window
+
     {
         public ObservableCollection<Patient> Patients { get; set; }
         public ObservableCollection<EcgRecord> Records { get; set; }
 
+        //  Khởi tạo HttpClient để gọi C# Web API cổng 5000
+        private static readonly HttpClient _httpClient = new HttpClient();
+
+        //nhớ xem Bác sĩ đang xem ca khám nào
+        private int _currentConsultationId = 0;
+
+        private HubConnection _hubConnection;
         public MainWindow()
         {
             InitializeComponent();
             LoadDummyData();
             LoadDummyRecords();
+
+            Records = new ObservableCollection<EcgRecord>();
             PatientListView.ItemsSource = Patients;
             RecordListView.ItemsSource = Records;
+
+            // [BACKEND] Gọi API ngay khi mở App để lấy data thật
+            // Load data khởi tạo
+            _ = LoadDataFromApiAsync(1);
+
+            // Khởi tạo kết nối SignalR
+            InitializeSignalR();
         }
+        private async void InitializeSignalR()
+        {
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl("http://localhost:5000/ecghub")
+                .WithAutomaticReconnect()
+                .Build();
+
+            // Lắng nghe sự kiện "PatientSentComplaint" từ Backend
+            _hubConnection.On<int>("PatientSentComplaint", async (ecgRecordId) =>
+            {
+                // Khi nhận được thông báo, tự động tải lại danh sách
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                {
+                    // Tải lại API
+                    await LoadDataFromApiAsync(1);
+
+                    MessageBox.Show($"Bệnh nhân vừa gửi yêu cầu cho Record ID: {ecgRecordId}");
+                });
+            });
+
+            try
+            {
+                await _hubConnection.StartAsync();
+            }
+            catch (Exception ex)
+            {
+            }
+        }
+
+        // Hàm này gọi API lấy 15 file của bệnh nhân
+        private async Task LoadDataFromApiAsync(int patientId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"http://localhost:5000/api/records/{patientId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var recordsApi = await response.Content.ReadFromJsonAsync<List<ConsultationDto>>();
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Records.Clear();
+                        foreach (var r in recordsApi)
+                        {
+                            Records.Add(new EcgRecord
+                            {
+                                Id = r.EcgId,
+                                Name = r.RecordName,
+                                Date = $"Trạng thái: {r.Status}",
+                                PatientComplaint = r.Complaint,
+                                ConsultationId = r.ConsultationId
+                            });
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Backend Error: Không thể kết nối tới Web API.\n" + ex.Message, "Lỗi Server");
+            }
+        }
+
+        // Hàm này gửi lời khuyên của Bác sĩ lên C# API
+        public async Task SubmitFeedbackToApi(int consultationId, string findings, string treatment)
+        {
+            var payload = new
+            {
+                ConsultationId = consultationId,
+                DoctorId = 1, 
+                Findings = findings,
+                Treatment = treatment
+            };
+
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("http://localhost:5000/api/doctor/feedback", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show("Đã lưu lời khuyên xuống Database thành công!", "Thông báo");
+                    await LoadDataFromApiAsync(1); // Load lại danh sách sau khi lưu
+                }
+                else
+                {
+                    MessageBox.Show("Lỗi khi lưu Database!", "Lỗi Server");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Mất kết nối tới API.\n" + ex.Message, "Lỗi Server");
+            }
+        }
+
+
 
         private void LoadDummyRecords()
         {
@@ -97,9 +213,11 @@ namespace HRMonitor
                 RightProfilePanel.Visibility = Visibility.Collapsed;
                 Grid.SetColumnSpan(LeftAreaGrid, 2);
                 RecordListGrid.Visibility = Visibility.Visible;
+
+                // Cập nhật lại data từ DB khi ấn View Bệnh Nhân
+                _ = LoadDataFromApiAsync(1);
             }
         }
-
         private void BackToPatients_Click(object sender, RoutedEventArgs e)
         {
             RecordListGrid.Visibility = Visibility.Collapsed;
@@ -112,10 +230,51 @@ namespace HRMonitor
         {
             if (sender is Button button && button.Tag is EcgRecord record)
             {
+                // 1. Lưu ConsultationId
+                _currentConsultationId = record.ConsultationId;
+
                 RecordDetailTitle.Text = record.Name;
+
+                // Nếu ConsultationId == 0 (Chưa có bệnh nhân nào gửi complaint)
+                if (_currentConsultationId == 0)
+                {
+                    MessageBox.Show("Bệnh nhân chưa gửi yêu cầu khám cho file này!", "Thông báo");
+                    return; // Chặn không cho bác sĩ gửi khuyên
+                }
+
+                // 2. Đổ nội dung
+                ComplaintTextBox.Text = string.IsNullOrEmpty(record.PatientComplaint)
+                    ? "Bệnh nhân không có phàn nàn gì."
+                    : record.PatientComplaint;
+
+                FindingsTextBox.Text = "";
+                TreatmentTextBox.Text = "";
+
                 RecordDetailModal.Visibility = Visibility.Visible;
                 PlotEcgData();
             }
+        }
+
+        private async void SubmitFeedback_Click(object sender, RoutedEventArgs e)
+        {
+            // Nếu chưa có ID ca khám thì không làm gì cả
+            if (_currentConsultationId == 0) return;
+
+            // Lấy chữ bác sĩ vừa gõ trên màn hình
+            string findings = FindingsTextBox.Text;
+            string treatment = TreatmentTextBox.Text;
+
+            if (string.IsNullOrWhiteSpace(findings) || string.IsNullOrWhiteSpace(treatment))
+            {
+                MessageBox.Show("Vui lòng nhập đầy đủ Findings và Treatment!", "Cảnh báo");
+                return;
+            }
+
+            // Gọi hàm Backend bạn đã viết sẵn để bắn lên API
+            await SubmitFeedbackToApi(_currentConsultationId, findings, treatment);
+
+            // Gửi xong thì tự động đóng cái Popup lại
+            RecordDetailModal.Visibility = Visibility.Collapsed;
         }
 
         private void CloseModal_Click(object sender, RoutedEventArgs e)
@@ -127,7 +286,7 @@ namespace HRMonitor
         {
             try
             {
-                string csvPath = "data.csv";
+                string csvPath = "D:\\PROGRAM\\KTPM_PROJECT\\KTPM_web\\HRMonitor\\HRMonitor\\data.csv";  //Đổi lại theo vị trị file CSV của bạn
                 if (File.Exists(csvPath))
                 {
                     using (var reader = new StreamReader(csvPath))
@@ -171,6 +330,7 @@ namespace HRMonitor
         }
     }
 
+    #region MODELS 
     public class Patient
     {
         public string Name { get; set; }
@@ -179,7 +339,6 @@ namespace HRMonitor
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
         public string Address { get; set; }
-
         public string GenderAgeText => $"{Gender}, {Age} years old";
     }
 
@@ -188,6 +347,10 @@ namespace HRMonitor
         public int Id { get; set; }
         public string Name { get; set; }
         public string Date { get; set; }
+
+        // Thuộc tính để hứng dữ liệu API
+        public int ConsultationId { get; set; }
+        public string PatientComplaint { get; set; }
     }
 
     public class CsvDataRow
@@ -198,4 +361,17 @@ namespace HRMonitor
         public double envelope { get; set; }
         public int pred_peak_mask { get; set; }
     }
+
+    // Class nhận JSON từ API trả về 
+    public class ConsultationDto
+    {
+        public int EcgId { get; set; }
+        public string RecordName { get; set; }
+        public int ConsultationId { get; set; }
+        public string Complaint { get; set; }
+        public string Findings { get; set; }
+        public string Treatment { get; set; }
+        public string Status { get; set; }
+    }
+    #endregion
 }
