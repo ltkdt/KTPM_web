@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +17,7 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 app.UseCors("AllowAll");
 
-string connString = @"Server=DESKTOP-58NU873\SQLEXPRESS; Database=BenhVienDB; Integrated Security=True; TrustServerCertificate=True;";  //SỬA TÊN SERVER CHO PHÙ HỢP
+string connString = @"Server=localhost\SQLEXPRESS; Database=BenhVienDB; Integrated Security=True; TrustServerCertificate=True;";  //SỬA TÊN SERVER CHO PHÙ HỢP
 
 
 app.MapHub<EcgHub>("/ecghub");
