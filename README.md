@@ -22,8 +22,8 @@
 ```text
 TELECARDIO_REPO/
 ├── Backend-API/            # ASP.NET Core Web API 8.0 & SignalR Hub
-├── Frontend-Patient/       # Web Client (HTML/JS/CSS) cho Bệnh nhân (Edge Device)
-├── Desktop-Doctor/         # Ứng dụng WPF C# cho Bác sĩ (Trạm Triage)
+├── Frontend_Patient_Web/   # Web Client (HTML/JS/CSS) cho Bệnh nhân (Edge Device)
+├── Frontend_Doctor_App/    # Ứng dụng WPF C# cho Bác sĩ (Trạm Triage)
 ├── Database/               # Chứa các Script khởi tạo SQL Server
 └── Tools/                  # Các module phụ trợ (VD: ConvertSQL_to_CSV)
 ```
