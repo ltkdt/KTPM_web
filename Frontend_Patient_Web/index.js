@@ -180,10 +180,12 @@
 		const xs = Array.from({ length: sampleCount }, (_, i) => Number((i * sampleInterval).toFixed(3)));
 
 		// load oi column values from CSV (csv_module)
+		const pathToFile = "../Database/ECG_Records/data.csv";
 		let ys = [];
+
 		if (window.csvModule && typeof window.csvModule.loadOiColumn === 'function') {
 			try {
-				const vals = await window.csvModule.loadOiColumn();
+				const vals = await window.csvModule.loadOiColumn(pathToFile);
 				ys = vals.slice(0, sampleCount);
 			} catch (e) {
 				console.error('failed to load oi column', e);
@@ -308,7 +310,7 @@
 					});
 					if (res.ok) {
 						alert("Gửi thành công! Chờ bác sĩ phản hồi nhé.");
-						if (typeof loadRealDataFromApi === "function") loadRealDataFromApi(); 
+						if (typeof loadRealDataFromApi === "function") loadRealDataFromApi();
 						hideDetail();
 					} else {
 						alert("Lỗi lưu Database!");
@@ -333,7 +335,7 @@
 			resetBtn.innerText = "Đang Reset...";
 			try {
 				const res = await fetch('http://localhost:5000/api/reset-database', {
-					method: 'GET' 
+					method: 'GET'
 				});
 
 				if (res.ok) {
