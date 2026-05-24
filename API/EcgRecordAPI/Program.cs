@@ -15,10 +15,11 @@ builder.Services.AddCors(options => {
 builder.Services.AddSignalR();
 
 var app = builder.Build();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseCors("AllowAll");
 
 string connString = @"Server=localhost\SQLEXPRESS; Database=BenhVienDB; Integrated Security=True; TrustServerCertificate=True;";  //SỬA TÊN SERVER CHO PHÙ HỢP
-
 
 app.MapHub<EcgHub>("/ecghub");
 
@@ -108,6 +109,11 @@ app.MapGet("/api/reset-database", async () => {
 
     return Results.Ok("Đã làm sạch toàn bộ dữ liệu bảng Consultations. App đã như mới!");
 });
+
+Console.WriteLine("=====================================================");
+Console.WriteLine("🚀 EcgRecordAPI đã khởi chạy thành công!");
+Console.WriteLine("👉 Hãy mở trình duyệt và truy cập: http://localhost:5000");
+Console.WriteLine("=====================================================");
 
 app.Run("http://localhost:5000");
 
