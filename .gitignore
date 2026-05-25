@@ -15,13 +15,6 @@ obj/
 *.userosscache
 *.sln.docattachments
 
-## SQL Server files (Tránh đẩy database cá nhân lên)
-*.mdf
-*.ldf
-*.ndf
-
-## CSV files (Nếu bạn muốn giữ lại file data.csv thì xóa dòng này)
-# *.csv
 
 ## Publish folders
 [Pp]ublish/
