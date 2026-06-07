@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -27,7 +27,11 @@ namespace HRMonitor
 
     {
         public ObservableCollection<Patient> Patients { get; set; }
+        public ObservableCollection<Doctor> Doctors { get; set; }
         public ObservableCollection<EcgRecord> Records { get; set; }
+        private bool isAdminLogin = false;
+        private Patient _selectedPatient;
+        private Doctor _selectedDoctor;
 
         //  Khởi tạo HttpClient để gọi C# Web API cổng 5000
         private static readonly HttpClient _httpClient = new HttpClient();
@@ -39,12 +43,17 @@ namespace HRMonitor
         public MainWindow()
         {
             InitializeComponent();
-            LoadDummyData();
-            LoadDummyRecords();
-
+            InitializeComponent();
+            Patients = new ObservableCollection<Patient>();
+            Doctors = new ObservableCollection<Doctor>();
             Records = new ObservableCollection<EcgRecord>();
+            
             PatientListView.ItemsSource = Patients;
+            DoctorListView.ItemsSource = Doctors;
             RecordListView.ItemsSource = Records;
+            AssignDoctorComboBox.ItemsSource = Doctors;
+
+            _ = LoadPatientsFromApiAsync();
 
             // [BACKEND] Gọi API ngay khi mở App để lấy data thật
             // Load data khởi tạo
@@ -100,7 +109,8 @@ namespace HRMonitor
                             Records.Add(new EcgRecord
                             {
                                 Id = r.EcgId,
-                                Name = r.RecordName,
+                                Name = $"Bản ghi ECG #{r.EcgId}",
+                                FilePath = r.RecordName,
                                 Date = $"Trạng thái: {r.Status}",
                                 PatientComplaint = r.Complaint,
                                 ConsultationId = r.ConsultationId
@@ -121,7 +131,7 @@ namespace HRMonitor
             var payload = new
             {
                 ConsultationId = consultationId,
-                DoctorId = 1, 
+                DoctorId = App.LoggedInDoctorId > 0 ? App.LoggedInDoctorId : 1, 
                 Findings = findings,
                 Treatment = treatment
             };
@@ -147,50 +157,135 @@ namespace HRMonitor
 
 
 
-        private void LoadDummyRecords()
+        // Xoá LoadDummyRecords()
+
+        private async Task LoadPatientsFromApiAsync()
         {
-            Records = new ObservableCollection<EcgRecord>();
-            for (int i = 1; i <= 15; i++)
+            try
             {
-                Records.Add(new EcgRecord
+                var response = await _httpClient.GetAsync("http://localhost:5000/api/patients");
+                if (response.IsSuccessStatusCode)
                 {
-                    Id = i,
-                    Name = $"ecg_record_{i}.json",
-                    Date = "2026-03-30 " + (8 + (i * 3) / 60).ToString("D2") + ":" + ((i * 3) % 60).ToString("D2")
-                });
+                    var patientsList = await response.Content.ReadFromJsonAsync<List<Patient>>();
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Patients.Clear();
+                        if (patientsList != null)
+                        {
+                            foreach (var p in patientsList)
+                            {
+                                if (!isAdminLogin && App.LoggedInDoctorId > 0 && p.DoctorId != App.LoggedInDoctorId)
+                                {
+                                    continue;
+                                }
+                                Patients.Add(p);
+                            }
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể tải danh sách bệnh nhân từ Server.\n" + ex.Message);
             }
         }
 
-        private void LoadDummyData()
+        private async Task LoadDoctorsFromApiAsync()
         {
-            Patients = new ObservableCollection<Patient>
+            try
             {
-                new Patient { Name = "Nguyen Van A", Age = 45, Gender = "Male", PhoneNumber = "0901234567", Email = "nva@example.com", Address = "123 Le Loi, District 1, HCMC" },
-                new Patient { Name = "Tran Thi B", Age = 32, Gender = "Female", PhoneNumber = "0912345678", Email = "ttb@example.com", Address = "456 Nguyen Hue, District 1, HCMC" },
-                new Patient { Name = "Le Van C", Age = 58, Gender = "Male", PhoneNumber = "0923456789", Email = "lvc@example.com", Address = "789 Tran Hung Dao, District 5, HCMC" },
-                new Patient { Name = "Pham Thi D", Age = 27, Gender = "Female", PhoneNumber = "0934567890", Email = "ptd@example.com", Address = "101 Nguyen Trai, District 1, HCMC" },
-                new Patient { Name = "Hoang Van E", Age = 64, Gender = "Male", PhoneNumber = "0945678901", Email = "hve@example.com", Address = "202 Le Duan, District 1, HCMC" }
-            };
+                var response = await _httpClient.GetAsync("http://localhost:5000/api/doctors");
+                if (response.IsSuccessStatusCode)
+                {
+                    var doctorsList = await response.Content.ReadFromJsonAsync<List<Doctor>>();
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        Doctors.Clear();
+                        if (doctorsList != null)
+                        {
+                            foreach (var d in doctorsList)
+                                Doctors.Add(d);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Không thể tải danh sách bác sĩ từ Server.\n" + ex.Message);
+            }
+        }
+
+        private void RoleToggle_Click(object sender, RoutedEventArgs e)
+        {
+            isAdminLogin = !isAdminLogin;
+            if (isAdminLogin)
+            {
+                LoginTitleText.Text = "Admin Login";
+                RoleToggleBtn.Content = "Doctor login";
+            }
+            else
+            {
+                LoginTitleText.Text = "Doctor Login";
+                RoleToggleBtn.Content = "Admin login";
+            }
         }
 
         private void Submit_Click(object sender, RoutedEventArgs e)
         {
-            if (IdTextBox.Text == "1" && PasswordBox.Password == "1")
+            if (isAdminLogin)
             {
-                LoginGrid.Visibility = Visibility.Collapsed;
-                DashboardGrid.Visibility = Visibility.Visible;
-                LoginErrorText.Visibility = Visibility.Collapsed;
+                if (IdTextBox.Text == "admin" && PasswordBox.Password == "admin")
+                {
+                    LoginGrid.Visibility = Visibility.Collapsed;
+                    DashboardGrid.Visibility = Visibility.Visible;
+                    LoginErrorText.Visibility = Visibility.Collapsed;
+                    DoctorListGrid.Visibility = Visibility.Visible;
+                    DoctorListRow.Height = new GridLength(1, GridUnitType.Star);
+                    _ = LoadDoctorsFromApiAsync();
+                    _ = LoadPatientsFromApiAsync();
+                }
+                else
+                {
+                    LoginErrorText.Visibility = Visibility.Visible;
+                }
             }
             else
             {
+                if (int.TryParse(IdTextBox.Text, out int docId))
+                {
+                    try
+                    {
+                        var response = await _httpClient.GetAsync("http://localhost:5000/api/doctors");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var doctorsList = await response.Content.ReadFromJsonAsync<List<Doctor>>();
+                            var doc = doctorsList?.FirstOrDefault(d => d.Id == docId && d.Password == PasswordBox.Password);
+                            
+                            if (doc != null)
+                            {
+                                App.LoggedInDoctorId = docId;
+                                LoginGrid.Visibility = Visibility.Collapsed;
+                                DashboardGrid.Visibility = Visibility.Visible;
+                                LoginErrorText.Visibility = Visibility.Collapsed;
+                                DoctorListGrid.Visibility = Visibility.Collapsed;
+                                DoctorListRow.Height = new GridLength(0);
+                                _ = LoadPatientsFromApiAsync();
+                                return;
+                            }
+                        }
+                    }
+                    catch { }
+                }
                 LoginErrorText.Visibility = Visibility.Visible;
             }
         }
 
-        private void ViewProfile_Click(object sender, RoutedEventArgs e)
+        private void PatientListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (sender is Button button && button.Tag is Patient patient)
+            if (PatientListView.SelectedItem is Patient patient)
             {
+                _selectedPatient = patient;
+                _selectedDoctor = null;
                 // Update profile details
                 ProfileName.Text = patient.Name;
                 ProfileAge.Text = patient.Age.ToString();
@@ -202,20 +297,81 @@ namespace HRMonitor
                 // Toggle visibility
                 EmptyProfileText.Visibility = Visibility.Collapsed;
                 ProfileDetailsPanel.Visibility = Visibility.Visible;
+                
+                if (isAdminLogin)
+                {
+                    DoctorAssignmentGrid.Visibility = Visibility.Visible;
+                    ViewRecordsFromProfileBtn.Visibility = Visibility.Collapsed;
+                    DeleteAccountBtn.Visibility = Visibility.Visible;
+                    AssignDoctorComboBox.SelectionChanged -= AssignDoctorComboBox_SelectionChanged;
+                    AssignDoctorComboBox.SelectedValue = patient.DoctorId;
+                    AssignDoctorComboBox.SelectionChanged += AssignDoctorComboBox_SelectionChanged;
+                }
+                else
+                {
+                    DoctorAssignmentGrid.Visibility = Visibility.Collapsed;
+                    ViewRecordsFromProfileBtn.Visibility = Visibility.Visible;
+                    DeleteAccountBtn.Visibility = Visibility.Collapsed;
+                }
             }
         }
 
-        private void ViewRecord_Click(object sender, RoutedEventArgs e)
+        private async void AssignDoctorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (sender is Button button && button.Tag is Patient patient)
+            if (_selectedPatient != null && AssignDoctorComboBox.SelectedValue is int doctorId)
+            {
+                _selectedPatient.DoctorId = doctorId;
+                try
+                {
+                    var payload = new { DoctorId = doctorId };
+                    var response = await _httpClient.PostAsJsonAsync($"http://localhost:5000/api/patients/{_selectedPatient.Id}/assign-doctor", payload);
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        MessageBox.Show("Gán bác sĩ thất bại!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Lỗi kết nối API: " + ex.Message);
+                }
+            }
+        }
+
+        private void DoctorListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (DoctorListView.SelectedItem is Doctor doctor)
+            {
+                _selectedDoctor = doctor;
+                _selectedPatient = null;
+                // Update profile details for Doctor
+                ProfileName.Text = doctor.FullName;
+                ProfileAge.Text = doctor.Age.ToString();
+                ProfileGender.Text = doctor.Gender;
+                ProfilePhone.Text = doctor.PhoneNumber;
+                ProfileEmail.Text = doctor.Email;
+                ProfileAddress.Text = doctor.Address;
+
+                // Toggle visibility
+                EmptyProfileText.Visibility = Visibility.Collapsed;
+                ProfileDetailsPanel.Visibility = Visibility.Visible;
+                ViewRecordsFromProfileBtn.Visibility = Visibility.Collapsed;
+                DoctorAssignmentGrid.Visibility = Visibility.Collapsed;
+                DeleteAccountBtn.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void ViewRecordFromProfile_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedPatient != null)
             {
                 PatientListGrid.Visibility = Visibility.Collapsed;
+                DoctorListGrid.Visibility = Visibility.Collapsed;
                 RightProfilePanel.Visibility = Visibility.Collapsed;
                 Grid.SetColumnSpan(LeftAreaGrid, 2);
                 RecordListGrid.Visibility = Visibility.Visible;
 
                 // Cập nhật lại data từ DB khi ấn View Bệnh Nhân
-                _ = LoadDataFromApiAsync(1);
+                _ = LoadDataFromApiAsync(_selectedPatient.Id); // Wait, Patient doesn't have Id in dummy model yet? Let's check.
             }
         }
         private void BackToPatients_Click(object sender, RoutedEventArgs e)
@@ -224,6 +380,67 @@ namespace HRMonitor
             Grid.SetColumnSpan(LeftAreaGrid, 1);
             RightProfilePanel.Visibility = Visibility.Visible;
             PatientListGrid.Visibility = Visibility.Visible;
+            if (isAdminLogin)
+            {
+                DoctorListGrid.Visibility = Visibility.Visible;
+            }
+        }
+
+        private async void DeleteAccountBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_selectedPatient != null)
+            {
+                if (MessageBox.Show($"Bạn có chắc chắn muốn xóa bệnh nhân '{_selectedPatient.Name}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        var response = await _httpClient.DeleteAsync($"http://localhost:5000/api/patients/{_selectedPatient.Id}");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            MessageBox.Show("Đã xóa bệnh nhân thành công.");
+                            ProfileDetailsPanel.Visibility = Visibility.Collapsed;
+                            EmptyProfileText.Visibility = Visibility.Visible;
+                            _selectedPatient = null;
+                            _ = LoadPatientsFromApiAsync();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Xóa thất bại!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Lỗi: " + ex.Message);
+                    }
+                }
+            }
+            else if (_selectedDoctor != null)
+            {
+                if (MessageBox.Show($"Bạn có chắc chắn muốn xóa bác sĩ '{_selectedDoctor.FullName}'?", "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        var response = await _httpClient.DeleteAsync($"http://localhost:5000/api/doctors/{_selectedDoctor.Id}");
+                        if (response.IsSuccessStatusCode)
+                        {
+                            MessageBox.Show("Đã xóa bác sĩ thành công.");
+                            ProfileDetailsPanel.Visibility = Visibility.Collapsed;
+                            EmptyProfileText.Visibility = Visibility.Visible;
+                            _selectedDoctor = null;
+                            _ = LoadDoctorsFromApiAsync();
+                            _ = LoadPatientsFromApiAsync();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Xóa thất bại!");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Lỗi: " + ex.Message);
+                    }
+                }
+            }
         }
 
         private void ViewRecordDetail_Click(object sender, RoutedEventArgs e)
@@ -251,7 +468,7 @@ namespace HRMonitor
                 TreatmentTextBox.Text = "";
 
                 RecordDetailModal.Visibility = Visibility.Visible;
-                PlotEcgData();
+                PlotEcgData(record.FilePath);
             }
         }
 
@@ -282,11 +499,10 @@ namespace HRMonitor
             RecordDetailModal.Visibility = Visibility.Collapsed;
         }
 
-        private void PlotEcgData()
+        private void PlotEcgData(string csvPath)
         {
             try
             {
-                string csvPath = "D:\\PROGRAM\\KTPM_PROJECT\\KTPM_web\\HRMonitor\\HRMonitor\\data.csv";  //Đổi lại theo vị trị file CSV của bạn
                 if (File.Exists(csvPath))
                 {
                     using (var reader = new StreamReader(csvPath))
@@ -333,12 +549,14 @@ namespace HRMonitor
     #region MODELS 
     public class Patient
     {
+        public int Id { get; set; }
         public string Name { get; set; }
         public int Age { get; set; }
         public string Gender { get; set; }
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
         public string Address { get; set; }
+        public int? DoctorId { get; set; }
         public string GenderAgeText => $"{Gender}, {Age} years old";
     }
 
@@ -346,6 +564,7 @@ namespace HRMonitor
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public string FilePath { get; set; }
         public string Date { get; set; }
 
         // Thuộc tính để hứng dữ liệu API
@@ -362,6 +581,20 @@ namespace HRMonitor
         public int pred_peak_mask { get; set; }
     }
 
+    public class Doctor
+    {
+        public int Id { get; set; }
+        public string FullName { get; set; }
+        public string Specialty { get; set; }
+        public int Age { get; set; }
+        public string Gender { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Hospital { get; set; }
+        public string Email { get; set; }
+        public string Address { get; set; }
+        public string Password { get; set; }
+    }
+    
     // Class nhận JSON từ API trả về 
     public class ConsultationDto
     {

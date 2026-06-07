@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ECG System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid #eaeaea;
+        }
+        .logo-text {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            font-weight: 700;
+            font-size: 20px;
+            color: #1a1a1a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon {
+            color: #3b82f6;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .title {
+            font-weight: 700;
+            font-size: 32px;
+            color: #111827;
+            margin-bottom: 30px;
+        }
+        .form-control {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+            border-color: #3b82f6;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            background-color: #2563eb;
+        }
+        .form-check-label {
+            font-size: 14px;
+            color: #4b5563;
+        }
+        .forgot-link {
+            font-size: 14px;
+            color: #3b82f6;
+            text-decoration: none;
+            float: right;
+        }
+        .forgot-link:hover {
+            text-decoration: underline;
+        }
+        .signup-text {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .signup-text a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .signup-text a:hover {
+            text-decoration: underline;
+        }
+        #errorMsg {
+            display: none;
+            color: #dc2626;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="logo-text">
+        <div class="logo-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="subtitle">Please enter your details</div>
+            <div class="title" id="formTitle">Welcome back</div>
+
+            <div id="errorMsg">Tên đăng nhập hoặc mật khẩu không đúng.</div>
+
+            <form id="loginForm">
+                <input type="text" id="fullName" class="form-control" placeholder="Full Name" required>
+                
+                <div id="registerFields" style="display: none;">
+                    <input type="number" id="age" class="form-control" placeholder="Age">
+                    <select id="gender" class="form-control">
+                        <option value="" disabled selected>Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <input type="tel" id="phoneNumber" class="form-control" placeholder="Phone Number">
+                    <input type="email" id="email" class="form-control" placeholder="Email">
+                    <input type="text" id="address" class="form-control" placeholder="Address">
+                </div>
+
+                <input type="password" id="password" class="form-control" placeholder="Password" required>
+                
+                <div class="d-flex justify-content-end align-items-center mb-4 mt-2" id="forgotPasswordDiv">
+                    <a href="#" class="forgot-link">Forgot password</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
+            </form>
+
+            <div class="signup-text" id="toggleTextDiv">
+                Don't have an account? <a id="toggleModeBtn">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isLoginMode = true;
+
+        document.getElementById('toggleModeBtn').addEventListener('click', toggleMode);
+
+        function toggleMode(e) {
+            if(e) e.preventDefault();
+            isLoginMode = !isLoginMode;
+            
+            const registerFields = document.getElementById('registerFields');
+            const forgotPasswordDiv = document.getElementById('forgotPasswordDiv');
+            const loginBtn = document.getElementById('loginBtn');
+            const title = document.getElementById('formTitle');
+            const toggleTextDiv = document.getElementById('toggleTextDiv');
+
+            if (isLoginMode) {
+                registerFields.style.display = 'none';
+                forgotPasswordDiv.style.display = 'flex';
+                loginBtn.innerText = 'Sign in';
+                title.innerText = 'Welcome back';
+                toggleTextDiv.innerHTML = 'Don\'t have an account? <a id="toggleModeBtn">Sign up</a>';
+                
+                document.getElementById('age').required = false;
+                document.getElementById('gender').required = false;
+                document.getElementById('phoneNumber').required = false;
+                document.getElementById('email').required = false;
+                document.getElementById('address').required = false;
+            } else {
+                registerFields.style.display = 'block';
+                forgotPasswordDiv.style.display = 'none';
+                loginBtn.innerText = 'Create Account';
+                title.innerText = 'Create Account';
+                toggleTextDiv.innerHTML = 'Already have an account? <a id="toggleModeBtn">Sign in</a>';
+                
+                document.getElementById('age').required = true;
+                document.getElementById('gender').required = true;
+                document.getElementById('phoneNumber').required = true;
+                document.getElementById('email').required = true;
+                document.getElementById('address').required = true;
+            }
+            
+            document.getElementById('toggleModeBtn').addEventListener('click', toggleMode);
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('fullName').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMsg');
+
+            loginBtn.disabled = true;
+            loginBtn.innerText = isLoginMode ? 'Signing in...' : 'Creating Account...';
+            errorMsg.style.display = 'none';
+
+            try {
+                let url = isLoginMode ? '/api/login' : '/api/register';
+                let bodyData = { FullName: fullName, Password: password };
+                
+                if (!isLoginMode) {
+                    bodyData.Age = parseInt(document.getElementById('age').value) || 0;
+                    bodyData.Gender = document.getElementById('gender').value;
+                    bodyData.PhoneNumber = document.getElementById('phoneNumber').value;
+                    bodyData.Email = document.getElementById('email').value;
+                    bodyData.Address = document.getElementById('address').value;
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bodyData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('patientId', data.patientId);
+                    localStorage.setItem('patientName', data.fullName);
+                    window.location.href = '/index.html';
+                } else {
+                    errorMsg.style.display = 'block';
+                    errorMsg.innerText = isLoginMode ? 'Tên đăng nhập hoặc mật khẩu không đúng.' : 'Đăng ký thất bại. Tên đăng nhập có thể đã tồn tại.';
+                    loginBtn.disabled = false;
+                    loginBtn.innerText = isLoginMode ? 'Sign in' : 'Create Account';
+                }
+            } catch (err) {
+                errorMsg.style.display = 'block';
+                errorMsg.innerText = 'Cannot connect to server.';
+                loginBtn.disabled = false;
+                loginBtn.innerText = isLoginMode ? 'Sign in' : 'Create Account';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+ltkdt
+
+EcgRecordAPI Project (.NET Backend API):
+- Target Framework: net10.0
+- Path: d:\KTPM_web\API\EcgRecordAPI\EcgRecordAPI.csproj
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+
+HRMonitor Project (.NET WPF Desktop App):
+- Target Framework: net10.0-windows
+- Path: d:\KTPM_web\HRMonitor\HRMonitor\HRMonitor.csproj
+
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.7" />
+    <PackageReference Include="ScottPlot.WPF" Version="5.1.58" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.0" />
+  </ItemGroup>

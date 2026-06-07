@@ -1,10 +1,7 @@
-// Simple CSV loader that returns the numeric values from the "oi" column
-var file_name = "data.csv";
-
 (function(){
-    async function loadOiColumn(){
+    async function loadOiColumn(csvUrl){
         try{
-            const resp = await fetch(file_name, {cache:'no-store'});
+            const resp = await fetch(csvUrl, {cache:'no-store'});
             if(!resp.ok) return [];
             const txt = await resp.text();
             const lines = txt.split(/\r?\n/).filter(l=>l.trim().length>0);
@@ -36,8 +33,3 @@ var file_name = "data.csv";
         loadOiColumn
     };
 })();
-
-var file_name = "data.csv"
-
-// Column read : "oi" (y-axis)
-

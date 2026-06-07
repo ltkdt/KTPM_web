@@ -15,7 +15,10 @@ builder.Services.AddCors(options => {
 builder.Services.AddSignalR();
 
 var app = builder.Build();
-app.UseDefaultFiles();
+var options = new DefaultFilesOptions();
+options.DefaultFileNames.Clear();
+options.DefaultFileNames.Add("login.html");
+app.UseDefaultFiles(options);
 app.UseStaticFiles();
 app.UseCors("AllowAll");
 
@@ -73,6 +76,20 @@ app.MapGet("/api/records/{patientId}", (int patientId) => {
     return Results.Ok(list);
 });
 
+// API endpoint để lấy file CSV theo EcgRecordId
+app.MapGet("/api/records/csv/{id}", (int id) => {
+    using SqlConnection conn = new SqlConnection(connString); conn.Open();
+    string sql = "SELECT RecordName FROM EcgRecords WHERE Id = @id";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", id);
+    string filePath = cmd.ExecuteScalar()?.ToString();
+    
+    if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+        return Results.NotFound("CSV file not found.");
+    
+    return Results.File(filePath, "text/csv");
+});
+
 // 3. WPF: Bác sĩ gửi lời khuyên
 app.MapPost("/api/doctor/feedback", async (FeedbackRequest req, IHubContext<EcgHub> hubContext) => {
     using SqlConnection conn = new SqlConnection(connString); await conn.OpenAsync();
@@ -92,6 +109,144 @@ app.MapPost("/api/doctor/feedback", async (FeedbackRequest req, IHubContext<EcgH
 });
 
 
+
+// API Login
+app.MapPost("/api/login", async (LoginRequest req) => {
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = "SELECT Id, FullName FROM Patients WHERE FullName = @FullName AND Password = @Password";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@FullName", req.FullName);
+    cmd.Parameters.AddWithValue("@Password", req.Password);
+    
+    using SqlDataReader reader = await cmd.ExecuteReaderAsync();
+    if (await reader.ReadAsync())
+    {
+        return Results.Ok(new { PatientId = reader["Id"], FullName = reader["FullName"].ToString() });
+    }
+    return Results.Unauthorized();
+});
+
+// API Register
+app.MapPost("/api/register", async (RegisterRequest req) => {
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    
+    string checkSql = "SELECT COUNT(1) FROM Patients WHERE FullName = @FullName";
+    using SqlCommand checkCmd = new SqlCommand(checkSql, conn);
+    checkCmd.Parameters.AddWithValue("@FullName", req.FullName);
+    int count = (int)await checkCmd.ExecuteScalarAsync();
+    if (count > 0) return Results.BadRequest("User already exists.");
+
+    string sql = @"INSERT INTO Patients (FullName, Age, Gender, PhoneNumber, Email, Address, Password) 
+                   OUTPUT INSERTED.Id 
+                   VALUES (@FullName, @Age, @Gender, @PhoneNumber, @Email, @Address, @Password)";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@FullName", req.FullName);
+    cmd.Parameters.AddWithValue("@Age", req.Age);
+    cmd.Parameters.AddWithValue("@Gender", req.Gender);
+    cmd.Parameters.AddWithValue("@PhoneNumber", req.PhoneNumber);
+    cmd.Parameters.AddWithValue("@Email", req.Email);
+    cmd.Parameters.AddWithValue("@Address", req.Address);
+    cmd.Parameters.AddWithValue("@Password", req.Password);
+    
+    int newId = (int)await cmd.ExecuteScalarAsync();
+    return Results.Ok(new { PatientId = newId, FullName = req.FullName });
+});
+
+// API Lấy danh sách Patients
+app.MapGet("/api/patients", async () => {
+    var list = new List<object>();
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = "SELECT Id, FullName, Age, Gender, PhoneNumber, Email, Address, DoctorId FROM Patients";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    using SqlDataReader reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        list.Add(new {
+            Id = reader["Id"],
+            Name = reader["FullName"].ToString(),
+            Age = reader["Age"] != DBNull.Value ? Convert.ToInt32(reader["Age"]) : 0,
+            Gender = reader["Gender"].ToString(),
+            PhoneNumber = reader["PhoneNumber"].ToString(),
+            Email = reader["Email"].ToString(),
+            Address = reader["Address"].ToString(),
+            DoctorId = reader["DoctorId"] != DBNull.Value ? Convert.ToInt32(reader["DoctorId"]) : (int?)null
+        });
+    }
+    return Results.Ok(list);
+});
+
+// API Gán bác sĩ cho bệnh nhân
+app.MapPost("/api/patients/{patientId}/assign-doctor", async (int patientId, AssignDoctorRequest req) => {
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = "UPDATE Patients SET DoctorId = @DoctorId WHERE Id = @PatientId";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@DoctorId", req.DoctorId.HasValue ? (object)req.DoctorId.Value : DBNull.Value);
+    cmd.Parameters.AddWithValue("@PatientId", patientId);
+    int rows = await cmd.ExecuteNonQueryAsync();
+    if (rows > 0) return Results.Ok();
+    return Results.NotFound();
+});
+
+// API Lấy danh sách Doctors
+app.MapGet("/api/doctors", async () => {
+    var list = new List<object>();
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = "SELECT Id, FullName, Specialty, Username, Password, Age, Gender, PhoneNumber, Hospital, Email, Address FROM Doctors";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    using SqlDataReader reader = await cmd.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+        list.Add(new {
+            Id = reader["Id"],
+            FullName = reader["FullName"].ToString(),
+            Specialty = reader["Specialty"].ToString(),
+            Username = reader["Username"]?.ToString(),
+            Age = reader["Age"] != DBNull.Value ? Convert.ToInt32(reader["Age"]) : 0,
+            Gender = reader["Gender"]?.ToString() ?? "",
+            PhoneNumber = reader["PhoneNumber"]?.ToString() ?? "",
+            Hospital = reader["Hospital"]?.ToString() ?? "",
+            Email = reader["Email"]?.ToString() ?? "",
+            Address = reader["Address"]?.ToString() ?? ""
+        });
+    }
+    return Results.Ok(list);
+});
+
+// API Delete Patient
+app.MapDelete("/api/patients/{id}", async (int id) => {
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = @"
+        DELETE FROM Consultations WHERE PatientId = @id;
+        DELETE FROM EcgRecords WHERE PatientId = @id;
+        DELETE FROM PatientDevices WHERE PatientId = @id;
+        DELETE FROM Patients WHERE Id = @id;
+    ";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", id);
+    await cmd.ExecuteNonQueryAsync();
+    return Results.Ok();
+});
+
+// API Delete Doctor
+app.MapDelete("/api/doctors/{id}", async (int id) => {
+    using SqlConnection conn = new SqlConnection(connString);
+    await conn.OpenAsync();
+    string sql = @"
+        UPDATE Patients SET DoctorId = NULL WHERE DoctorId = @id;
+        UPDATE Consultations SET DoctorId = NULL WHERE DoctorId = @id;
+        DELETE FROM Doctors WHERE Id = @id;
+    ";
+    using SqlCommand cmd = new SqlCommand(sql, conn);
+    cmd.Parameters.AddWithValue("@id", id);
+    await cmd.ExecuteNonQueryAsync();
+    return Results.Ok();
+});
 
 // API ẨN DÙNG ĐỂ RESET DATABASE CHO MỚI
 app.MapGet("/api/reset-database", async () => {
@@ -121,3 +276,6 @@ public class EcgHub : Hub { }
 
 public class ComplaintRequest { public int PatientId { get; set; } public int EcgRecordId { get; set; } public string Complaint { get; set; } }
 public class FeedbackRequest { public int ConsultationId { get; set; } public int DoctorId { get; set; } public string Findings { get; set; } public string Treatment { get; set; } }
+public class LoginRequest { public string FullName { get; set; } public string Password { get; set; } }
+public class AssignDoctorRequest { public int? DoctorId { get; set; } }
+public class RegisterRequest { public string FullName { get; set; } public int Age { get; set; } public string Gender { get; set; } public string PhoneNumber { get; set; } public string Email { get; set; } public string Address { get; set; } public string Password { get; set; } }

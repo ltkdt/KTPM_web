@@ -3,15 +3,7 @@
 	const perPage = 10;
 	let currentPage = 1;
 
-	// generate sample data
-	const records = Array.from({ length: 15 }, (_, i) => {
-		const id = i + 1;
-		const pad = n => String(n).padStart(2, '0');
-		const hour = 8 + (i % 10);
-		const minute = 5 + (i * 3) % 55;
-		const time = `2026-03-30 ${pad(hour)}:${pad(minute)}`;
-		return { id, name: `ecg_record_${id}.json`, time };
-	});
+	let records = [];
 
 	const tbody = document.querySelector('#recordsTable tbody');
 	const prevBtn = document.getElementById('prevBtn');
@@ -23,6 +15,9 @@
 		const totalPages = Math.max(1, Math.ceil(records.length / perPage));
 		pageCount.textContent = totalPages;
 		pageInfo.textContent = currentPage;
+
+		const totalSpan = document.getElementById('totalRecordsCount');
+		if (totalSpan) totalSpan.textContent = `(${records.length} total)`;
 
 		const start = (currentPage - 1) * perPage;
 		const slice = records.slice(start, start + perPage);
@@ -56,6 +51,11 @@
 
 	// env toggle buttons (envProd may not exist in the DOM; guard it)
 	const envDummy = document.getElementById('envDummy');
+	const patientName = localStorage.getItem('patientName') || 'Unknown Patient';
+	if (envDummy) {
+		envDummy.textContent = patientName;
+		envDummy.href = 'profile.html';
+	}
 	const envProd = document.getElementById('envProd');
 	function setEnv(dummy) {
 		if (dummy) {
@@ -106,7 +106,7 @@
 									</div>
 								</div>
 							</div>
-							<div class="detail-meta text-center text-muted mt-2" id="detailMeta">ecg_record_1.json</div>
+							<div class="detail-meta text-center text-muted mt-2" id="detailMeta">Bản ghi ECG #1</div>
 									<canvas id="detailChart" width="600" height="240" style="max-width:100%;"></canvas>
 									<!-- clinical notes boxes -->
 									<div class="mt-3 w-100">
@@ -183,7 +183,8 @@
 		let ys = [];
 		if (window.csvModule && typeof window.csvModule.loadOiColumn === 'function') {
 			try {
-				const vals = await window.csvModule.loadOiColumn();
+				const csvUrl = `http://localhost:5000/api/records/csv/${id}`;
+				const vals = await window.csvModule.loadOiColumn(csvUrl);
 				ys = vals.slice(0, sampleCount);
 			} catch (e) {
 				console.error('failed to load oi column', e);
@@ -294,8 +295,9 @@
 				newSaveBtn.innerText = "Đang gửi...";
 				newSaveBtn.disabled = true;
 
+				const patientId = localStorage.getItem('patientId');
 				const payload = {
-					PatientId: 1,
+					PatientId: Number(patientId),
 					EcgRecordId: Number(id),
 					Complaint: elems.complaint.value.trim()
 				};
@@ -382,28 +384,32 @@
 
 
 	async function loadRealDataFromApi() {
+		const patientId = localStorage.getItem('patientId');
+		if (!patientId) {
+			window.location.href = '/login.html';
+			return;
+		}
+
 		try {
-			// Gọi API lấy danh sách các tư vấn (Consultations) của bệnh nhân 1
-			const res = await fetch('http://localhost:5000/api/records/1');
+			// Gọi API lấy danh sách các tư vấn (Consultations) của bệnh nhân
+			const res = await fetch(`http://localhost:5000/api/records/${patientId}`);
 			if (res.ok) {
 				const dbConsultations = await res.json();
 
-				// Duyệt qua dữ liệu API, TÌM và CẬP NHẬT vào mảng records giả của Frontend
+				records = [];
 				dbConsultations.forEach(dbItem => {
-					// Tìm record có ID tương ứng trong mảng 15 file giả
-					let existingRecord = records.find(r => r.id === dbItem.ecgId);
+					let timeText = dbItem.status === "Pending" ? "⏳ Đang chờ Bác sĩ" 
+								 : (dbItem.status === "Responded" ? "✅ Đã phản hồi" : "Mới");
 
-					if (existingRecord) {
-						// Nếu DB báo là Pending hoặc Responded, đổi trạng thái hiển thị
-						if (dbItem.status === "Pending") existingRecord.time = "⏳ Đang chờ Bác sĩ";
-						if (dbItem.status === "Responded") existingRecord.time = "✅ Đã phản hồi";
-
-						// Lưu data DB vào object để lát hiện lên form chi tiết
-						existingRecord.dbComplaint = dbItem.complaint;
-						existingRecord.dbFindings = dbItem.findings;
-						existingRecord.dbTreatment = dbItem.treatment;
-						existingRecord.dbStatus = dbItem.status;
-					}
+					records.push({
+						id: dbItem.ecgId,
+						name: `Bản ghi ECG #${dbItem.ecgId}`,
+						time: timeText,
+						dbComplaint: dbItem.complaint,
+						dbFindings: dbItem.findings,
+						dbTreatment: dbItem.treatment,
+						dbStatus: dbItem.status
+					});
 				});
 				render();
 			}

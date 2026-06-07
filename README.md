@@ -89,3 +89,25 @@ Dự án **EcgRecordAPI** được xây dựng theo mô hình **ASP.NET Core Web
 * **Giao diện (Frontend)**: Tích hợp trực tiếp Frontend (chỉ dùng HTML, CSS, JS thuần) bằng middleware `app.UseStaticFiles()`. Các file giao diện tĩnh được đặt tại thư mục `wwwroot` và server sẽ tự động phục vụ giao diện này mà không cần đến View Engine như Razor Pages.
 * **Cơ sở dữ liệu**: Truy xuất cơ sở dữ liệu SQL Server trực tiếp thông qua ADO.NET (`SqlConnection`, `SqlCommand`) để lấy/ghi dữ liệu với hiệu năng cao.
 * **Giao tiếp Realtime**: Tích hợp **SignalR** để đẩy sự kiện tức thì (realtime) giữa ứng dụng Web của Bệnh nhân và ứng dụng Desktop WPF của Bác sĩ.
+
+### 5. Thông tin Dữ liệu Mẫu (Sample Data)
+Sau khi chạy script SQL, hệ thống sẽ được khởi tạo với dữ liệu mẫu như sau:
+
+**Danh sách Bác sĩ:**
+1. **Bs. Jane Doe** (ID: 1)
+2. **Bs. John Doe** (ID: 2)
+
+**Danh sách Bệnh nhân và Phân công:**
+- **Nguyen Van A** (ID: 1) - Được phân công cho Bs. John Doe
+- **Tran Thi B** (ID: 2) - Được phân công cho Bs. John Doe
+- **Le Van C** (ID: 3) - Được phân công cho Bs. John Doe
+- **Pham Thi D** (ID: 4) - Được phân công cho Bs. Jane Doe
+- **Hoang Van E** (ID: 5) - Được phân công cho Bs. Jane Doe
+
+**Phân bổ Bản ghi ECG (ECG Records):**
+Hệ thống hiện có 15 bản ghi ECG mẫu, chia đều cho 5 bệnh nhân (mỗi người 3 bản ghi):
+- **Bệnh nhân 1 (Nguyen Van A)**: Sở hữu các bản ghi ID 1, 2, 3 (Ví dụ: `Record_1_1.csv`)
+- **Bệnh nhân 2 (Tran Thi B)**: Sở hữu các bản ghi ID 4, 5, 6
+- **Bệnh nhân 3 (Le Van C)**: Sở hữu các bản ghi ID 7, 8, 9
+- **Bệnh nhân 4 (Pham Thi D)**: Sở hữu các bản ghi ID 10, 11, 12
+- **Bệnh nhân 5 (Hoang Van E)**: Sở hữu các bản ghi ID 13, 14, 15
