@@ -230,7 +230,7 @@ namespace HRMonitor
             }
         }
 
-        private void Submit_Click(object sender, RoutedEventArgs e)
+        private async void Submit_Click(object sender, RoutedEventArgs e)
         {
             if (isAdminLogin)
             {

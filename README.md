@@ -93,16 +93,23 @@ Dự án **EcgRecordAPI** được xây dựng theo mô hình **ASP.NET Core Web
 ### 5. Thông tin Dữ liệu Mẫu (Sample Data)
 Sau khi chạy script SQL, hệ thống sẽ được khởi tạo với dữ liệu mẫu như sau:
 
-**Danh sách Bác sĩ:**
-1. **Bs. Jane Doe** (ID: 1)
-2. **Bs. John Doe** (ID: 2)
+**Danh sách Bác sĩ (Đăng nhập qua Desktop App HRMonitor):**
+*Cách đăng nhập: Nhập số **ID** vào ô Account và nhập Mật khẩu.*
+1. **Bs. Jane Doe** (Account: `1`) - Mật khẩu: `2222`
+2. **Bs. John Doe** (Account: `2`) - Mật khẩu: `1111`
 
-**Danh sách Bệnh nhân và Phân công:**
-- **Nguyen Van A** (ID: 1) - Được phân công cho Bs. John Doe
-- **Tran Thi B** (ID: 2) - Được phân công cho Bs. John Doe
-- **Le Van C** (ID: 3) - Được phân công cho Bs. John Doe
-- **Pham Thi D** (ID: 4) - Được phân công cho Bs. Jane Doe
-- **Hoang Van E** (ID: 5) - Được phân công cho Bs. Jane Doe
+**Danh sách Bệnh nhân (Đăng nhập qua Web `http://localhost:5000`):**
+*Cách đăng nhập: Nhập chính xác **Họ và tên** vào ô Full Name và nhập Mật khẩu.*
+- **Nguyen Van A** - Mật khẩu: `8392` (Được phân công cho Bs. John Doe)
+- **Tran Thi B** - Mật khẩu: `1234` (Được phân công cho Bs. John Doe)
+- **Le Van C** - Mật khẩu: `5678` (Được phân công cho Bs. John Doe)
+- **Pham Thi D** - Mật khẩu: `4321` (Được phân công cho Bs. Jane Doe)
+- **Hoang Van E** - Mật khẩu: `8765` (Được phân công cho Bs. Jane Doe)
+
+**Quản trị viên (Admin) (Đăng nhập qua Desktop App HRMonitor):**
+*Cách đăng nhập: Nhấn nút **Admin login** trên màn hình ứng dụng WPF để chuyển chế độ.*
+- Account: `admin`
+- Password: `admin`
 
 **Phân bổ Bản ghi ECG (ECG Records):**
 Hệ thống hiện có 15 bản ghi ECG mẫu, chia đều cho 5 bệnh nhân (mỗi người 3 bản ghi):

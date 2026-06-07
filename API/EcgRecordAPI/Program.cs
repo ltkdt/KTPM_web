@@ -206,6 +206,7 @@ app.MapGet("/api/doctors", async () => {
             FullName = reader["FullName"].ToString(),
             Specialty = reader["Specialty"].ToString(),
             Username = reader["Username"]?.ToString(),
+            Password = reader["Password"]?.ToString(),
             Age = reader["Age"] != DBNull.Value ? Convert.ToInt32(reader["Age"]) : 0,
             Gender = reader["Gender"]?.ToString() ?? "",
             PhoneNumber = reader["PhoneNumber"]?.ToString() ?? "",
