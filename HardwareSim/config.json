@@ -1,0 +1,7 @@
+{
+  "MacAddress": "00:1A:2B:3C:4D:5E",
+  "PatientId": 1,
+  "MeasureIntervalSeconds": 30,
+  "UploadIntervalSeconds": 60,
+  "BaseApiUrl": "http://localhost:5000"
+}
