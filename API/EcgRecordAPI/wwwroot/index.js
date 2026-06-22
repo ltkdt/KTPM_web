@@ -164,9 +164,12 @@
 			tr.after(detailContainer);
 		}
 
-		// default value (could be replaced by real measurement)
-		elems.bpm.textContent = '60.3 bpm';
-		elems.rmssd.textContent = '35.8 ms';
+		// default or real value (could be replaced by real measurement)
+		const nhipTimVal = rec.nhipTim !== undefined && rec.nhipTim !== null ? rec.nhipTim : (rec.NhipTim !== undefined && rec.NhipTim !== null ? rec.NhipTim : null);
+		const rmssdVal = rec.rmssd !== undefined && rec.rmssd !== null ? rec.rmssd : (rec.Rmssd !== undefined && rec.Rmssd !== null ? rec.Rmssd : null);
+		
+		elems.bpm.textContent = nhipTimVal !== null ? `${nhipTimVal} bpm` : '60.3 bpm';
+		elems.rmssd.textContent = rmssdVal !== null ? `${Number(rmssdVal).toFixed(1)} ms` : '35.8 ms';
 		// set clinical notes defaults (ensure textareas keep provided defaults)
 		if (elems.complaint) elems.complaint.value = elems.complaint.value || 'Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường.';
 		if (elems.findings) elems.findings.value = elems.findings.value || 'Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường.';
@@ -408,7 +411,9 @@
 						dbComplaint: dbItem.complaint,
 						dbFindings: dbItem.findings,
 						dbTreatment: dbItem.treatment,
-						dbStatus: dbItem.status
+						dbStatus: dbItem.status,
+						nhipTim: dbItem.nhipTim !== undefined ? dbItem.nhipTim : dbItem.NhipTim,
+						rmssd: dbItem.rmssd !== undefined ? dbItem.rmssd : dbItem.Rmssd
 					});
 				});
 				render();
@@ -429,6 +434,11 @@
 		connection.on("DoctorSentFeedback", () => {
 			alert("Bác sĩ vừa phản hồi ca khám của bạn!");
 			loadRealDataFromApi(); // Load và trộn lại data mới nhất
+		});
+
+		connection.on("NewRecordUploaded", () => {
+			console.log("[SignalR] Thiết bị đo vừa tải lên dữ liệu đo mới.");
+			loadRealDataFromApi(); // Tự động làm mới danh sách dữ liệu trên màn hình mà không cần F5
 		});
 
 		connection.start().catch(err => console.error("SignalR:", err));
