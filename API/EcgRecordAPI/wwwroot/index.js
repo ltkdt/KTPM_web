@@ -1,452 +1,213 @@
-// Sample renderer for the records table with paging and a Time column
-(function () {
-	const perPage = 10;
-	let currentPage = 1;
+(() => {
+    const pageSize = 10;
+    let currentPage = 1;
+    let records = [];
+    let detailChart = null;
+    let isDemoMode = false;
 
-	let records = [];
+    const tbody = document.querySelector('#recordsTable tbody');
+    const detailContainer = document.getElementById('detailContainer');
+    const patientId = localStorage.getItem('patientId');
+    const patientName = localStorage.getItem('patientName');
+    const statusLabels = {
+        PENDING: '⏳ Đang chờ bác sĩ tư vấn',
+        Pending: '⏳ Đang chờ bác sĩ tư vấn',
+        RESPONDED: '✅ Bác sĩ đã phản hồi',
+        Responded: '✅ Bác sĩ đã phản hồi',
+        NOTCONSULTED: '📝 Chưa gửi yêu cầu tư vấn',
+        NotConsulted: '📝 Chưa gửi yêu cầu tư vấn'
+    };
 
-	const tbody = document.querySelector('#recordsTable tbody');
-	const prevBtn = document.getElementById('prevBtn');
-	const nextBtn = document.getElementById('nextBtn');
-	const pageInfo = document.getElementById('pageInfo');
-	const pageCount = document.getElementById('pageCount');
+    function statusText(status) {
+        return statusLabels[status] ?? '📝 Chưa gửi yêu cầu tư vấn';
+    }
 
-	function render() {
-		const totalPages = Math.max(1, Math.ceil(records.length / perPage));
-		pageCount.textContent = totalPages;
-		pageInfo.textContent = currentPage;
+    function render() {
+        const totalPages = Math.max(1, Math.ceil(records.length / pageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        document.getElementById('pageInfo').textContent = currentPage;
+        document.getElementById('pageCount').textContent = totalPages;
+        document.getElementById('totalRecordsCount').textContent = `(${records.length} bản ghi)`;
+        document.getElementById('prevBtn').disabled = currentPage <= 1;
+        document.getElementById('nextBtn').disabled = currentPage >= totalPages;
 
-		const totalSpan = document.getElementById('totalRecordsCount');
-		if (totalSpan) totalSpan.textContent = `(${records.length} total)`;
+        tbody.querySelectorAll('tr:not(#detailContainer)').forEach(row => row.remove());
+        const start = (currentPage - 1) * pageSize;
+        records.slice(start, start + pageSize).forEach(record => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${record.id}</td>
+                <td class="name-cell" data-id="${record.id}">
+                    <strong>${record.name}</strong><br>
+                    <small class="text-muted">${record.statusText}</small>
+                </td>
+                <td class="action-column"><button class="btn btn-sm btn-primary view-btn" data-id="${record.id}">Xem biểu đồ</button></td>`;
+            tbody.insertBefore(row, detailContainer);
+        });
+    }
 
-		const start = (currentPage - 1) * perPage;
-		const slice = records.slice(start, start + perPage);
+    function ensureDetailContent() {
+        const card = detailContainer.querySelector('.detail-card');
+        if (document.getElementById('consultationInfo')) return;
+        const consultation = document.createElement('section');
+        consultation.id = 'consultationInfo';
+        consultation.className = 'mt-3 border-top pt-3';
+        consultation.innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-label small text-muted">Trạng thái tư vấn</label><div id="consultationStatus" class="fw-semibold"></div></div>
+                <div class="col-md-8"><label class="form-label small text-muted">Bác sĩ phụ trách</label><div id="doctorName" class="fw-semibold"></div></div>
+                <div class="col-12"><label class="form-label small text-muted">Triệu chứng</label><textarea id="complaintInput" class="form-control" rows="3"></textarea></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Nhận xét của bác sĩ</label><textarea id="findingsInput" class="form-control bg-light" rows="4" readonly></textarea></div>
+                <div class="col-md-6"><label class="form-label small text-muted">Phác đồ điều trị</label><textarea id="treatmentInput" class="form-control bg-light" rows="4" readonly></textarea></div>
+                <div class="col-12 text-end"><button id="sendComplaintBtn" class="btn btn-success">Gửi yêu cầu tư vấn</button></div>
+            </div>`;
+        card.appendChild(consultation);
+    }
 
-		tbody.innerHTML = '';
-		slice.forEach(r => {
-			const tr = document.createElement('tr');
-			tr.innerHTML = `
-				<td>${r.id}</td>
-				<td class="name-cell" data-id="${r.id}">${r.name} <small class="text-muted ms-2">${r.time}</small></td>
-				<td class="action-column"><button class="btn btn-sm btn-primary view-btn" data-id="${r.id}">View</button></td>
-			`;
-			tr.addEventListener('click', () => {
-				document.querySelectorAll('#recordsTable tbody tr').forEach(x => x.classList.remove('selected'));
-				tr.classList.add('selected');
-			});
-			tbody.appendChild(tr);
-		});
+    async function loadSignal(record) {
+        if (record.demo) return makeDemoSignal(record.variant);
+        try {
+            const response = await fetch(`/api/records/${record.id}/csv`);
+            if (!response.ok) throw new Error('Không có tệp CSV');
+            const text = await response.text();
+            const values = text.split(/\r?\n/).slice(1).map(line => Number(line.split(',')[1])).filter(Number.isFinite);
+            return values.length ? values.slice(0, 1000) : makeDemoSignal(record.variant);
+        } catch {
+            return makeDemoSignal(record.variant);
+        }
+    }
 
-		prevBtn.disabled = currentPage <= 1;
-		nextBtn.disabled = currentPage >= totalPages;
-	}
+    function makeDemoSignal(variant = 0) {
+        const values = [];
+        const rate = 72 + variant * 8;
+        for (let index = 0; index < 1000; index++) {
+            const time = index / 250;
+            const phase = (time * rate / 60) % 1;
+            const p = 0.10 * Math.exp(-Math.pow((phase - .18) / .035, 2));
+            const q = -0.13 * Math.exp(-Math.pow((phase - .39) / .012, 2));
+            const r = 0.88 * Math.exp(-Math.pow((phase - .42) / .016, 2));
+            const s = -0.25 * Math.exp(-Math.pow((phase - .46) / .02, 2));
+            const t = 0.25 * Math.exp(-Math.pow((phase - .68) / .065, 2));
+            values.push(p + q + r + s + t + .015 * Math.sin(index * .09));
+        }
+        return values;
+    }
 
-	prevBtn.addEventListener('click', () => {
-		if (currentPage > 1) { currentPage--; render(); }
-	});
-	nextBtn.addEventListener('click', () => {
-		const totalPages = Math.max(1, Math.ceil(records.length / perPage));
-		if (currentPage < totalPages) { currentPage++; render(); }
-	});
+    function drawChart(values) {
+        if (detailChart) detailChart.destroy();
+        detailChart = new Chart(document.getElementById('detailChart'), {
+            type: 'line',
+            data: {
+                labels: values.map((_, index) => (index / 250).toFixed(2)),
+                datasets: [{ data: values, borderColor: '#0d6efd', borderWidth: 2, pointRadius: 0, tension: .08 }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'Thời gian (giây)' }, ticks: { maxTicksLimit: 9 } },
+                    y: { title: { display: true, text: 'Điện áp (mV)' }, suggestedMin: -0.4, suggestedMax: 1.1 }
+                }
+            }
+        });
+    }
 
-	// env toggle buttons (envProd may not exist in the DOM; guard it)
-	const envDummy = document.getElementById('envDummy');
-	const patientName = localStorage.getItem('patientName') || 'Unknown Patient';
-	if (envDummy) {
-		envDummy.textContent = patientName;
-		envDummy.href = 'profile.html';
-	}
-	const envProd = document.getElementById('envProd');
-	function setEnv(dummy) {
-		if (dummy) {
-			envDummy.classList.add('btn-primary'); envDummy.classList.remove('btn-light');
-			if (envProd) { envProd.classList.remove('btn-primary'); envProd.classList.add('btn-light'); }
-		} else {
-			if (envProd) { envProd.classList.add('btn-primary'); envProd.classList.remove('btn-light'); }
-			envDummy.classList.remove('btn-primary'); envDummy.classList.add('btn-light');
-		}
-	}
-	envDummy.addEventListener('click', () => setEnv(true));
-	if (envProd) envProd.addEventListener('click', () => setEnv(false));
+    async function showDetail(id) {
+        const record = records.find(item => item.id === Number(id));
+        if (!record) return;
+        ensureDetailContent();
+        const row = tbody.querySelector(`[data-id="${id}"]`)?.closest('tr');
+        if (row) row.after(detailContainer);
+        detailContainer.classList.remove('d-none');
+        document.getElementById('detailMeta').textContent = record.name;
+        document.getElementById('bpmValue').textContent = `${record.nhipTim ?? '--'} bpm`;
+        document.getElementById('rmssdValue').textContent = record.rmssd == null ? '-- ms' : `${Number(record.rmssd).toFixed(1)} ms`;
+        document.getElementById('consultationStatus').textContent = record.statusText;
+        document.getElementById('doctorName').textContent = record.doctor ?? (record.status === 'RESPONDED' || record.status === 'Responded' ? 'Bác sĩ phụ trách' : 'Chưa phân công');
+        document.getElementById('complaintInput').value = record.complaint ?? '';
+        document.getElementById('findingsInput').value = record.findings ?? 'Chưa có nhận xét.';
+        document.getElementById('treatmentInput').value = record.treatment ?? 'Chưa có phác đồ điều trị.';
+        const sendButton = document.getElementById('sendComplaintBtn');
+        sendButton.hidden = isDemoMode || !patientId || record.consultationId > 0;
+        sendButton.onclick = () => sendComplaint(record, sendButton);
+        drawChart(await loadSignal(record));
+        detailContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
-	// initial state
-	setEnv(true);
-	render();
+    async function sendComplaint(record, button) {
+        const complaint = document.getElementById('complaintInput').value.trim();
+        if (!complaint) return alert('Vui lòng nhập triệu chứng trước khi gửi.');
+        button.disabled = true;
+        button.textContent = 'Đang gửi...';
+        try {
+            const response = await fetch('/api/patient/complaint', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ PatientId: Number(patientId), EcgRecordId: record.id, Complaint: complaint }) });
+            if (!response.ok) throw new Error();
+            alert('Đã gửi yêu cầu tư vấn thành công.');
+            await loadApiRecords();
+            hideDetail();
+        } catch {
+            alert('Không thể gửi yêu cầu tư vấn. Vui lòng thử lại.');
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Gửi yêu cầu tư vấn';
+        }
+    }
 
-	// Detail panel logic (create lazily because render() recreates tbody)
-	let detailChart = null;
-	let detailContainer = document.getElementById('detailContainer');
+    function hideDetail() {
+        detailContainer.classList.add('d-none');
+        if (detailChart) { detailChart.destroy(); detailChart = null; }
+    }
 
-	function ensureDetailElements() {
-		// if the container isn't in the DOM, create it
-		if (!detailContainer) {
-			detailContainer = document.createElement('tr');
-			detailContainer.id = 'detailContainer';
-			detailContainer.className = 'd-none';
-			detailContainer.innerHTML = `
-				<td colspan="3">
-					<div id="detailPanel" class="detail-panel">
-						<div class="detail-card shadow-sm">
-							<button id="detailClose" class="btn-close" aria-label="Close"></button>
-							<div class="d-flex justify-content-center gap-3 my-3">
-								<div class="text-center">
-									<div class="detail-label text-muted large">Heart rate</div>
-									<div class="circle-outer">
-										<div class="circle-inner">
-											<div id="bpmValue" class="bpm">60.3 bpm</div>
-										</div>
-									</div>
-								</div>
-								<div class="text-center">
-									<div class="detail-label text-muted large">RMSSD</div>
-									<div class="circle-outer2">
-										<div class="circle-inner2">
-											<div id="rmssdValue" class="bpm2">35.8 ms</div>
-										</div>
-									</div>
-								</div>
-							</div>
-							<div class="detail-meta text-center text-muted mt-2" id="detailMeta">Bản ghi ECG #1</div>
-									<canvas id="detailChart" width="600" height="240" style="max-width:100%;"></canvas>
-									<!-- clinical notes boxes -->
-									<div class="mt-3 w-100">
-										<div class="row g-3">
-											<div class="col-12">
-												<label class="form-label small text-muted">Complaint</label>
-												<textarea id="complaintInput" class="form-control" style="height:140px;">Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường.</textarea>
-											</div>
-											<div class="col-12">
-												<label class="form-label small text-muted">Findings</label>
-												<textarea id="findingsInput" class="form-control" style="height:140px;">Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường.</textarea>
-											</div>
-											<div class="col-12">
-												<label class="form-label small text-muted">Treatment Plan</label>
-												<textarea id="treatmentInput" class="form-control" style="height:140px;">Khuyến nghị nghỉ ngơi và theo dõi thêm. Uống đủ nước, điều chỉnh cường độ tập luyện phù hợp. Nếu triệu chứng tái diễn hoặc kèm đau ngực/chóng mặt, cần tái khám để làm thêm các xét nghiệm (ECG gắng sức, siêu âm tim).</textarea>
-											</div>
-											<div class="col-12">
-												<label class="form-label small text-muted">Doctor</label>
-												<input id="doctorInput" class="form-control" value="Jane Doe">
-											</div>
-										</div>
-									</div>
-						</div>
-						</div>
-					</td>
-				`;
-		}
+    function loadDemoRecords() {
+        isDemoMode = true;
+        records = [
+            { id: 901, name: 'Mẫu ECG bình thường', status: 'RESPONDED', statusText: '✅ Bác sĩ đã phản hồi', nhipTim: 72, rmssd: 38.6, complaint: 'Khám sức khỏe định kỳ, không có triệu chứng bất thường.', findings: 'Nhịp xoang đều, tín hiệu ECG trong giới hạn bình thường.', treatment: 'Duy trì vận động nhẹ và tái khám định kỳ.', doctor: 'BS. Nguyễn Minh An', consultationId: 901, demo: true, variant: 0 },
+            { id: 902, name: 'Mẫu ECG cần theo dõi', status: 'PENDING', statusText: '⏳ Đang chờ bác sĩ tư vấn', nhipTim: 96, rmssd: 29.4, complaint: 'Cảm giác hồi hộp sau khi vận động mạnh.', findings: '', treatment: '', doctor: 'BS. Trần Thu Hà', consultationId: 902, demo: true, variant: 1 },
+            { id: 903, name: 'Mẫu ECG nhịp nhanh', status: 'NOTCONSULTED', statusText: '📝 Chưa gửi yêu cầu tư vấn', nhipTim: 108, rmssd: 24.8, complaint: '', findings: '', treatment: '', doctor: '', consultationId: 0, demo: true, variant: 2 }
+        ];
+        currentPage = 1;
+        render();
+        showDetail(901);
+    }
 
-		// return element references
-		return {
-			panel: detailContainer.querySelector('#detailPanel') || document.getElementById('detailPanel'),
-			bpm: detailContainer.querySelector('#bpmValue') || document.getElementById('bpmValue'),
-			rmssd: detailContainer.querySelector('#rmssdValue') || document.getElementById('rmssdValue'),
-			complaint: detailContainer.querySelector('#complaintInput') || document.getElementById('complaintInput'),
-			findings: detailContainer.querySelector('#findingsInput') || document.getElementById('findingsInput'),
-			treatment: detailContainer.querySelector('#treatmentInput') || document.getElementById('treatmentInput'),
-			doctor: detailContainer.querySelector('#doctorInput') || document.getElementById('doctorInput'),
-			meta: detailContainer.querySelector('#detailMeta') || document.getElementById('detailMeta'),
-			closeBtn: detailContainer.querySelector('#detailClose') || document.getElementById('detailClose'),
-			canvas: detailContainer.querySelector('#detailChart') || document.getElementById('detailChart')
-		};
-	}
+    async function loadApiRecords() {
+        if (!patientId) return loadDemoRecords();
+        try {
+            const response = await fetch(`/api/records/${patientId}`);
+            if (!response.ok) throw new Error();
+            const items = await response.json();
+            if (!items.length) return loadDemoRecords();
+            isDemoMode = false;
+            records = items.map(item => ({
+                id: item.ecgId, name: `Bản ghi ECG #${item.ecgId}`, status: item.status,
+                statusText: statusText(item.status), nhipTim: item.nhipTim, rmssd: item.rmssd,
+                complaint: item.complaint, findings: item.findings, treatment: item.treatment,
+                consultationId: item.consultationId ?? 0, demo: false, variant: item.ecgId % 3
+            }));
+            currentPage = 1;
+            render();
+        } catch {
+            loadDemoRecords();
+        }
+    }
 
-	async function showDetailFor(id) {
-		const rec = records.find(r => r.id === Number(id));
-		if (!rec) return;
-
-		// ensure the detail row and inner elements exist and get refs
-		const elems = ensureDetailElements();
-
-		// find row and insert detail panel after it
-		const row = document.querySelector(`#recordsTable [data-id="${id}"]`);
-		if (row) {
-			const tr = row.closest('tr');
-			tr.after(detailContainer);
-		}
-
-		// default or real value (could be replaced by real measurement)
-		const nhipTimVal = rec.nhipTim !== undefined && rec.nhipTim !== null ? rec.nhipTim : (rec.NhipTim !== undefined && rec.NhipTim !== null ? rec.NhipTim : null);
-		const rmssdVal = rec.rmssd !== undefined && rec.rmssd !== null ? rec.rmssd : (rec.Rmssd !== undefined && rec.Rmssd !== null ? rec.Rmssd : null);
-		
-		elems.bpm.textContent = nhipTimVal !== null ? `${nhipTimVal} bpm` : '60.3 bpm';
-		elems.rmssd.textContent = rmssdVal !== null ? `${Number(rmssdVal).toFixed(1)} ms` : '35.8 ms';
-		// set clinical notes defaults (ensure textareas keep provided defaults)
-		if (elems.complaint) elems.complaint.value = elems.complaint.value || 'Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường.';
-		if (elems.findings) elems.findings.value = elems.findings.value || 'Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường.';
-		if (elems.treatment) elems.treatment.value = elems.treatment.value || 'Khuyến nghị nghỉ ngơi và theo dõi thêm. Uống đủ nước, điều chỉnh cường độ tập luyện phù hợp. Nếu triệu chứng tái diễn hoặc kèm đau ngực/chóng mặt, cần tái khám để làm thêm các xét nghiệm (ECG gắng sức, siêu âm tim).';
-		if (elems.doctor) elems.doctor.value = elems.doctor.value || 'Jane Doe';
-		elems.meta.textContent = rec.name;
-
-		// prepare and render chart: x axis is 1000 samples at 250Hz (4s), y from csv 'oi' column
-		const sampleCount = 1000;
-		const sampleInterval = 1 / 250; // 0.004s
-		const xs = Array.from({ length: sampleCount }, (_, i) => Number((i * sampleInterval).toFixed(3)));
-
-		// load oi column values from CSV (csv_module)
-		let ys = [];
-		if (window.csvModule && typeof window.csvModule.loadOiColumn === 'function') {
-			try {
-				const csvUrl = `http://localhost:5000/api/records/csv/${id}`;
-				const vals = await window.csvModule.loadOiColumn(csvUrl);
-				ys = vals.slice(0, sampleCount);
-			} catch (e) {
-				console.error('failed to load oi column', e);
-				ys = [];
-			}
-		}
-
-		// pad or trim to sampleCount
-		if (ys.length < sampleCount) {
-			const pad = new Array(sampleCount - ys.length).fill(0);
-			ys = ys.concat(pad);
-		} else if (ys.length > sampleCount) {
-			ys = ys.slice(0, sampleCount);
-		}
-
-		if (detailChart) { detailChart.destroy(); detailChart = null; }
-
-		const detailCanvas = elems.canvas;
-		if (detailCanvas && window.Chart) {
-			const ctx = detailCanvas.getContext('2d');
-			detailChart = new Chart(ctx, {
-				type: 'line',
-				data: {
-					labels: xs,
-					datasets: [{
-						label: 'y = x',
-						data: ys,
-						borderColor: '#0d6efd',
-						tension: 0.1,
-						fill: false,
-						pointRadius: 0
-					}]
-				},
-				options: {
-					scales: {
-						x: { title: { display: true, text: 'x' } },
-						y: { title: { display: true, text: 'y' } }
-					},
-					plugins: { legend: { display: false } },
-					responsive: true,
-					maintainAspectRatio: true
-				}
-			});
-		}
-
-		// wire up close button (may be created dynamically)
-		const detailClose = elems.closeBtn;
-		if (detailClose) detailClose.addEventListener('click', hideDetail);
-
-		// insert and show
-		if (detailContainer.classList.contains('d-none')) detailContainer.classList.remove('d-none');
-		const panel = elems.panel;
-		if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-		// =================================================================
-		//THÊM NÚT VÀ GỌI API 
-		// =================================================================
-		// 1. Hiển thị dữ liệu DB (nếu có) lên các ô Textarea
-		if (rec.dbStatus !== undefined) {
-			if (elems.complaint) elems.complaint.value = rec.dbComplaint || "";
-
-			if (elems.findings) {
-				elems.findings.value = rec.dbFindings || "";
-				elems.findings.readOnly = true; // Bệnh nhân không được sửa nhận xét
-				elems.findings.style.backgroundColor = "#e9ecef";
-			}
-			if (elems.treatment) {
-				elems.treatment.value = rec.dbTreatment || "";
-				elems.treatment.readOnly = true;
-				elems.treatment.style.backgroundColor = "#e9ecef";
-			}
-			if (elems.doctor) {
-				elems.doctor.value = rec.dbStatus === "Responded" ? "Bác sĩ Jane Doe" : "Đang chờ tư vấn...";
-				elems.doctor.readOnly = true;
-				elems.doctor.style.backgroundColor = "#e9ecef";
-			}
-		} else {
-			// Nếu chưa có data trên DB thì reset trắng để bệnh nhân tự điền complaint
-			if (elems.complaint) elems.complaint.value = "";
-			if (elems.findings) { elems.findings.value = "Chưa có nhận xét"; elems.findings.readOnly = true; elems.findings.style.backgroundColor = "#e9ecef"; }
-			if (elems.treatment) { elems.treatment.value = "Chưa có lời khuyên"; elems.treatment.readOnly = true; elems.treatment.style.backgroundColor = "#e9ecef"; }
-			if (elems.doctor) { elems.doctor.value = "Chưa có bác sĩ"; elems.doctor.readOnly = true; elems.doctor.style.backgroundColor = "#e9ecef"; }
-		}
-
-		// 2. Nút gửi Complaint cho bác sĩ
-		let saveBtn = document.getElementById('apiSaveBtn');
-		if (!saveBtn) {
-			const btnDiv = document.createElement('div');
-			btnDiv.className = "col-12 mt-3 text-end";
-			btnDiv.innerHTML = `<button id="apiSaveBtn" class="btn btn-success">Gửi yêu cầu cho Bác sĩ</button>`;
-			if (elems.doctor && elems.doctor.parentElement && elems.doctor.parentElement.parentElement) {
-				elems.doctor.parentElement.parentElement.appendChild(btnDiv);
-			}
-			saveBtn = document.getElementById('apiSaveBtn');
-		}
-
-		if (saveBtn) {
-			// xóa event listener cũ: clone element
-			const newSaveBtn = saveBtn.cloneNode(true);
-			saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
-
-			newSaveBtn.addEventListener('click', async () => {
-				if (!elems.complaint || elems.complaint.value.trim() === "") {
-					alert("Vui lòng nhập tình trạng của bạn!");
-					return;
-				}
-
-				newSaveBtn.innerText = "Đang gửi...";
-				newSaveBtn.disabled = true;
-
-				const patientId = localStorage.getItem('patientId');
-				const payload = {
-					PatientId: Number(patientId),
-					EcgRecordId: Number(id),
-					Complaint: elems.complaint.value.trim()
-				};
-
-				try {
-					const res = await fetch('http://localhost:5000/api/patient/complaint', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(payload)
-					});
-					if (res.ok) {
-						alert("Gửi thành công! Chờ bác sĩ phản hồi nhé.");
-						if (typeof loadRealDataFromApi === "function") loadRealDataFromApi(); 
-						hideDetail();
-					} else {
-						alert("Lỗi lưu Database!");
-					}
-				} catch (e) {
-					alert("Không tìm thấy Backend cổng 5000.");
-				} finally {
-					newSaveBtn.innerText = "Gửi yêu cầu cho Bác sĩ";
-					newSaveBtn.disabled = false;
-				}
-			});
-		}
-
-	}
-
-	//Reset button
-	const resetBtn = document.getElementById('resetDbBtn');
-	if (resetBtn) {
-		resetBtn.addEventListener('click', async () => {
-			if (!confirm("Bạn có chắc chắn muốn XÓA SẠCH toàn bộ dữ liệu tư vấn (Về như mới) không?")) return;
-
-			resetBtn.innerText = "Đang Reset...";
-			try {
-				const res = await fetch('http://localhost:5000/api/reset-database', {
-					method: 'GET' 
-				});
-
-				if (res.ok) {
-					alert("Đã làm sạch Database! Giao diện sẽ tự khởi động lại.");
-					loadRealDataFromApi();
-				} else {
-					alert("Lỗi 405 hoặc 500: Hãy kiểm tra lại file Program.cs");
-				}
-			} catch (e) {
-				alert("Không kết nối được với Backend cổng 5000.");
-			} finally {
-				resetBtn.innerHTML = "🔄 Làm mới Database";
-			}
-		});
-	}
-
-	function hideDetail() {
-		detailContainer.classList.add('d-none');
-		if (detailChart) { detailChart.destroy(); detailChart = null; }
-	}
-
-	// delegate clicks from tbody to handle view button or name clicks
-	tbody.addEventListener('click', (ev) => {
-		const btn = ev.target.closest('.view-btn');
-		if (btn) {
-			const id = btn.getAttribute('data-id');
-			showDetailFor(id);
-			return;
-		}
-
-		const cell = ev.target.closest('.name-cell');
-		if (cell) {
-			const id = cell.getAttribute('data-id');
-			showDetailFor(id);
-		}
-	});
-
-	// close button is wired when the detail row is created
-
-	// click outside panel closes it
-	document.addEventListener('click', (ev) => {
-		if (detailContainer.classList.contains('d-none')) return;
-		const inside = ev.target.closest('#detailPanel') || ev.target.closest('.name-cell') || ev.target.closest('.view-btn');
-		if (!inside) hideDetail();
-	});
-
-
-	async function loadRealDataFromApi() {
-		const patientId = localStorage.getItem('patientId');
-		if (!patientId) {
-			window.location.href = '/login.html';
-			return;
-		}
-
-		try {
-			// Gọi API lấy danh sách các tư vấn (Consultations) của bệnh nhân
-			const res = await fetch(`http://localhost:5000/api/records/${patientId}`);
-			if (res.ok) {
-				const dbConsultations = await res.json();
-
-				records = [];
-				dbConsultations.forEach(dbItem => {
-					let timeText = dbItem.status === "Pending" ? "⏳ Đang chờ Bác sĩ" 
-								 : (dbItem.status === "Responded" ? "✅ Đã phản hồi" : "Mới");
-
-					records.push({
-						id: dbItem.ecgId,
-						name: `Bản ghi ECG #${dbItem.ecgId}`,
-						time: timeText,
-						dbComplaint: dbItem.complaint,
-						dbFindings: dbItem.findings,
-						dbTreatment: dbItem.treatment,
-						dbStatus: dbItem.status,
-						nhipTim: dbItem.nhipTim !== undefined ? dbItem.nhipTim : dbItem.NhipTim,
-						rmssd: dbItem.rmssd !== undefined ? dbItem.rmssd : dbItem.Rmssd
-					});
-				});
-				render();
-			}
-		} catch (e) {
-			console.log("Chưa bật API Backend. Đang chạy chế độ offline hoàn toàn.");
-		}
-	}
-
-
-	// Tích hợp SignalR để cập nhật tự động khi bác sĩ vừa gõ xong
-	if (typeof signalR !== 'undefined') {
-		const connection = new signalR.HubConnectionBuilder()
-			.withUrl("http://localhost:5000/ecghub")
-			.withAutomaticReconnect()
-			.build();
-
-		connection.on("DoctorSentFeedback", () => {
-			alert("Bác sĩ vừa phản hồi ca khám của bạn!");
-			loadRealDataFromApi(); // Load và trộn lại data mới nhất
-		});
-
-		connection.on("NewRecordUploaded", () => {
-			console.log("[SignalR] Thiết bị đo vừa tải lên dữ liệu đo mới.");
-			loadRealDataFromApi(); // Tự động làm mới danh sách dữ liệu trên màn hình mà không cần F5
-		});
-
-		connection.start().catch(err => console.error("SignalR:", err));
-	}
-
-	// Chạy trộn dữ liệu ngay khi mở web
-	loadRealDataFromApi();
-
-
-
+    document.getElementById('envDummy').textContent = patientName || 'Hồ sơ bệnh nhân';
+    document.getElementById('demoBtn').addEventListener('click', loadDemoRecords);
+    document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('patientId'); localStorage.removeItem('patientName'); window.location.href = '/login.html'; });
+    document.getElementById('resetDbBtn').addEventListener('click', async () => {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ ca tư vấn?')) return;
+        const response = await fetch('/api/reset-database', { method: 'POST' });
+        if (response.ok) { alert('Đã làm mới các ca tư vấn.'); loadApiRecords(); } else alert('Không thể làm mới dữ liệu tư vấn.');
+    });
+    document.getElementById('prevBtn').addEventListener('click', () => { if (currentPage > 1) { currentPage--; render(); } });
+    document.getElementById('nextBtn').addEventListener('click', () => { if (currentPage * pageSize < records.length) { currentPage++; render(); } });
+    tbody.addEventListener('click', event => { const target = event.target.closest('.view-btn, .name-cell'); if (target) showDetail(target.dataset.id); });
+    document.getElementById('detailClose').addEventListener('click', hideDetail);
+    if (typeof signalR !== 'undefined') {
+        const connection = new signalR.HubConnectionBuilder().withUrl('/ecghub').withAutomaticReconnect().build();
+        connection.on('DoctorSentFeedback', loadApiRecords);
+        connection.on('NewRecordUploaded', loadApiRecords);
+        connection.start().catch(() => {});
+    }
+    loadApiRecords();
 })();

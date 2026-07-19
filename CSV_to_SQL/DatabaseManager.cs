@@ -7,7 +7,7 @@ namespace KTPM_Project
 {
     public class DatabaseManager
     {
-        private static string connString = @"Server=.; Database=BenhVienDB; Integrated Security=True; TrustServerCertificate=True;";
+        private static string connString = @"Server=.; Database=HeThong_ECG; Integrated Security=True; TrustServerCertificate=True;";
 
         // --- Nạp dữ liệu từ CSV vào SQL  ---
         public static void ImportCsvToSql(string csvPath)

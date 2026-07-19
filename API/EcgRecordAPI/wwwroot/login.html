@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - ECG System</title>
+    <title>Đăng nhập - Hệ thống ECG</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
@@ -126,38 +126,38 @@
 
     <div class="login-container">
         <div class="login-card">
-            <div class="subtitle">Please enter your details</div>
-            <div class="title" id="formTitle">Welcome back</div>
+            <div class="subtitle">Vui lòng nhập thông tin của bạn</div>
+            <div class="title" id="formTitle">Chào mừng bạn quay lại</div>
 
             <div id="errorMsg">Tên đăng nhập hoặc mật khẩu không đúng.</div>
 
             <form id="loginForm">
-                <input type="text" id="fullName" class="form-control" placeholder="Full Name" required>
+                <input type="text" id="fullName" class="form-control" placeholder="Họ và tên" required>
                 
                 <div id="registerFields" style="display: none;">
-                    <input type="number" id="age" class="form-control" placeholder="Age">
+                    <input type="number" id="age" class="form-control" placeholder="Tuổi">
                     <select id="gender" class="form-control">
-                        <option value="" disabled selected>Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="" disabled selected>Chọn giới tính</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
                     </select>
-                    <input type="tel" id="phoneNumber" class="form-control" placeholder="Phone Number">
+                    <input type="tel" id="phoneNumber" class="form-control" placeholder="Số điện thoại">
                     <input type="email" id="email" class="form-control" placeholder="Email">
-                    <input type="text" id="address" class="form-control" placeholder="Address">
+                    <input type="text" id="address" class="form-control" placeholder="Địa chỉ">
                 </div>
 
-                <input type="password" id="password" class="form-control" placeholder="Password" required>
+                <input type="password" id="password" class="form-control" placeholder="Mật khẩu" required>
                 
                 <div class="d-flex justify-content-end align-items-center mb-4 mt-2" id="forgotPasswordDiv">
-                    <a href="#" class="forgot-link">Forgot password</a>
+                    <a href="#" class="forgot-link">Quên mật khẩu</a>
                 </div>
 
-                <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
+                <button type="submit" class="btn btn-primary" id="loginBtn">Đăng nhập</button>
             </form>
 
             <div class="signup-text" id="toggleTextDiv">
-                Don't have an account? <a id="toggleModeBtn">Sign up</a>
+                Chưa có tài khoản? <a id="toggleModeBtn">Đăng ký</a>
             </div>
         </div>
     </div>
@@ -180,9 +180,9 @@
             if (isLoginMode) {
                 registerFields.style.display = 'none';
                 forgotPasswordDiv.style.display = 'flex';
-                loginBtn.innerText = 'Sign in';
-                title.innerText = 'Welcome back';
-                toggleTextDiv.innerHTML = 'Don\'t have an account? <a id="toggleModeBtn">Sign up</a>';
+                loginBtn.innerText = 'Đăng nhập';
+                title.innerText = 'Chào mừng bạn quay lại';
+                toggleTextDiv.innerHTML = 'Chưa có tài khoản? <a id="toggleModeBtn">Đăng ký</a>';
                 
                 document.getElementById('age').required = false;
                 document.getElementById('gender').required = false;
@@ -192,9 +192,9 @@
             } else {
                 registerFields.style.display = 'block';
                 forgotPasswordDiv.style.display = 'none';
-                loginBtn.innerText = 'Create Account';
-                title.innerText = 'Create Account';
-                toggleTextDiv.innerHTML = 'Already have an account? <a id="toggleModeBtn">Sign in</a>';
+                loginBtn.innerText = 'Tạo tài khoản';
+                title.innerText = 'Tạo tài khoản';
+                toggleTextDiv.innerHTML = 'Đã có tài khoản? <a id="toggleModeBtn">Đăng nhập</a>';
                 
                 document.getElementById('age').required = true;
                 document.getElementById('gender').required = true;
@@ -214,7 +214,7 @@
             const errorMsg = document.getElementById('errorMsg');
 
             loginBtn.disabled = true;
-            loginBtn.innerText = isLoginMode ? 'Signing in...' : 'Creating Account...';
+            loginBtn.innerText = isLoginMode ? 'Đang đăng nhập...' : 'Đang tạo tài khoản...';
             errorMsg.style.display = 'none';
 
             try {
@@ -244,13 +244,13 @@
                     errorMsg.style.display = 'block';
                     errorMsg.innerText = isLoginMode ? 'Tên đăng nhập hoặc mật khẩu không đúng.' : 'Đăng ký thất bại. Tên đăng nhập có thể đã tồn tại.';
                     loginBtn.disabled = false;
-                    loginBtn.innerText = isLoginMode ? 'Sign in' : 'Create Account';
+                    loginBtn.innerText = isLoginMode ? 'Đăng nhập' : 'Tạo tài khoản';
                 }
             } catch (err) {
                 errorMsg.style.display = 'block';
-                errorMsg.innerText = 'Cannot connect to server.';
+                errorMsg.innerText = 'Không thể kết nối đến máy chủ.';
                 loginBtn.disabled = false;
-                loginBtn.innerText = isLoginMode ? 'Sign in' : 'Create Account';
+                loginBtn.innerText = isLoginMode ? 'Đăng nhập' : 'Tạo tài khoản';
             }
         });
     </script>

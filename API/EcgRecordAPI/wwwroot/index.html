@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>ECG Record Viewer</title>
+	<title>Theo dõi bản ghi ECG</title>
 	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 	<link rel="stylesheet" href="style.css">
 </head>
@@ -12,12 +12,13 @@
 <body>
 	<div class="container py-5">
 		<header class="text-center mb-4">
-			<h1 class="fw-bold">ECG Record Viewer</h1>
-			<p class="text-muted">View and analyze ECG waveform data from stored records</p>
-			<div class="btn-group mb-3" role="group" aria-label="env toggle">
-				<a id="envDummy" href="javascript:void(0)" class="btn btn-primary" role="button">Patient X</a>
-				<!-- THÊM NÚT RESET -->
-				<button id="resetDbBtn" class="btn btn-danger ms-2">🔄 Làm mới</button>
+			<h1 class="fw-bold">Theo dõi bản ghi ECG</h1>
+			<p class="text-muted">Xem và phân tích dữ liệu sóng điện tim từ các bản ghi đã lưu</p>
+			<div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
+				<a id="envDummy" href="profile.html" class="btn btn-primary" role="button">Hồ sơ bệnh nhân</a>
+				<button id="demoBtn" class="btn btn-outline-primary">Xem dữ liệu minh họa</button>
+				<button id="logoutBtn" class="btn btn-outline-secondary">Đăng xuất</button>
+				<button id="resetDbBtn" class="btn btn-outline-danger">Làm mới tư vấn</button>
 			</div>
 		</header>
 
@@ -25,7 +26,7 @@
 			<div class="card shadow-sm records-card">
 				<div class="card-header d-flex justify-content-between align-items-center">
 					<div>
-						<strong>Records</strong> <span class="text-muted" id="totalRecordsCount">(0 total)</span>
+						<strong>Bản ghi</strong> <span class="text-muted" id="totalRecordsCount">(0 bản ghi)</span>
 					</div>
 				</div>
 				<div class="card-body p-0">
@@ -34,8 +35,8 @@
 							<thead class="table-light small text-muted">
 								<tr>
 									<th style="width:80px">ID</th>
-									<th>Name</th>
-									<th class="action-column" style="width:120px">Actions</th>
+									<th>Tên bản ghi</th>
+									<th class="action-column" style="width:120px">Thao tác</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -48,10 +49,10 @@
 												<button id="detailClose" class="btn-close" aria-label="Close"></button>
 												<div class="d-flex justify-content-center gap-3 my-3">
 													<div class="text-center">
-														<div class="detail-label text-muted large">Heart rate</div>
+													<div class="detail-label text-muted large">Nhịp tim</div>
 														<div class="circle-outer">
 															<div class="circle-inner">
-																<div id="bpmValue" class="bpm">60.3 bpm</div>
+													<div id="bpmValue" class="bpm">-- bpm</div>
 															</div>
 														</div>
 													</div>
@@ -59,7 +60,7 @@
 														<div class="detail-label text-muted large">RMSSD</div>
 														<div class="circle-outer2">
 															<div class="circle-inner2">
-																<div id="rmssdValue" class="bpm2">35.8 ms</div>
+													<div id="rmssdValue" class="bpm2">-- ms</div>
 															</div>
 														</div>
 													</div>
@@ -79,13 +80,13 @@
 				</div>
 				<div class="card-footer d-flex justify-content-between align-items-center">
 					<div>
-						<button id="prevBtn" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+						<button id="prevBtn" class="btn btn-sm btn-outline-secondary" disabled>Trước</button>
 					</div>
 					<div class="text-center text-muted small">
-						Page <span id="pageInfo">1</span> of <span id="pageCount">1</span>
+						Trang <span id="pageInfo">1</span> / <span id="pageCount">1</span>
 					</div>
 					<div>
-						<button id="nextBtn" class="btn btn-sm btn-outline-secondary">Next</button>
+						<button id="nextBtn" class="btn btn-sm btn-outline-secondary">Sau</button>
 					</div>
 				</div>
 			</div>

@@ -38,11 +38,11 @@ namespace HRMonitor
 
         //nhớ xem Bác sĩ đang xem ca khám nào
         private int _currentConsultationId = 0;
+        private bool _isDemoRecord;
 
         private HubConnection _hubConnection;
         public MainWindow()
         {
-            InitializeComponent();
             InitializeComponent();
             Patients = new ObservableCollection<Patient>();
             Doctors = new ObservableCollection<Doctor>();
@@ -104,25 +104,45 @@ namespace HRMonitor
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         Records.Clear();
-                        foreach (var r in recordsApi)
+                        foreach (var r in recordsApi ?? [])
                         {
                             Records.Add(new EcgRecord
                             {
                                 Id = r.EcgId,
                                 Name = $"Bản ghi ECG #{r.EcgId}",
                                 FilePath = r.RecordName,
-                                Date = $"Trạng thái: {r.Status}",
+                                Date = $"Trạng thái: {FormatConsultationStatus(r.Status)}",
                                 PatientComplaint = r.Complaint,
-                                ConsultationId = r.ConsultationId
+                                ConsultationId = r.ConsultationId,
+                                Findings = r.Findings,
+                                Treatment = r.Treatment,
+                                HeartRate = r.NhipTim,
+                                Rmssd = r.Rmssd
                             });
                         }
+                        if (Records.Count == 0) LoadDemoRecords();
                     });
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Backend Error: Không thể kết nối tới Web API.\n" + ex.Message, "Lỗi Server");
+                LoadDemoRecords();
             }
+        }
+
+        private static string FormatConsultationStatus(string? status) => status switch
+        {
+            "PENDING" or "Pending" => "⏳ Đang chờ bác sĩ tư vấn",
+            "RESPONDED" or "Responded" => "✅ Bác sĩ đã phản hồi",
+            _ => "📝 Chưa gửi yêu cầu tư vấn"
+        };
+
+        private void LoadDemoRecords()
+        {
+            Records.Clear();
+            Records.Add(new EcgRecord { Id = 901, Name = "Mẫu ECG bình thường", Date = "Trạng thái: ✅ Bác sĩ đã phản hồi", PatientComplaint = "Khám sức khỏe định kỳ, không có triệu chứng bất thường.", Findings = "Nhịp xoang đều, sóng ECG trong giới hạn bình thường.", Treatment = "Duy trì vận động nhẹ và tái khám định kỳ.", ConsultationId = 901, HeartRate = 72, Rmssd = 38.6, IsDemo = true, WaveVariant = 0 });
+            Records.Add(new EcgRecord { Id = 902, Name = "Mẫu ECG cần theo dõi", Date = "Trạng thái: ⏳ Đang chờ bác sĩ tư vấn", PatientComplaint = "Cảm giác hồi hộp sau khi vận động mạnh.", ConsultationId = 902, HeartRate = 96, Rmssd = 29.4, IsDemo = true, WaveVariant = 1 });
+            Records.Add(new EcgRecord { Id = 903, Name = "Mẫu ECG nhịp nhanh", Date = "Trạng thái: 📝 Chưa gửi yêu cầu tư vấn", ConsultationId = 0, HeartRate = 108, Rmssd = 24.8, IsDemo = true, WaveVariant = 2 });
         }
 
         // Hàm này gửi lời khuyên của Bác sĩ lên C# API
@@ -220,13 +240,13 @@ namespace HRMonitor
             isAdminLogin = !isAdminLogin;
             if (isAdminLogin)
             {
-                LoginTitleText.Text = "Admin Login";
-                RoleToggleBtn.Content = "Doctor login";
+                LoginTitleText.Text = "Đăng nhập Quản trị viên";
+                RoleToggleBtn.Content = "Đăng nhập Bác sĩ";
             }
             else
             {
-                LoginTitleText.Text = "Doctor Login";
-                RoleToggleBtn.Content = "Admin login";
+                LoginTitleText.Text = "Đăng nhập Bác sĩ";
+                RoleToggleBtn.Content = "Đăng nhập Quản trị viên";
             }
         }
 
@@ -241,8 +261,10 @@ namespace HRMonitor
                     LoginErrorText.Visibility = Visibility.Collapsed;
                     DoctorListGrid.Visibility = Visibility.Visible;
                     DoctorListRow.Height = new GridLength(1, GridUnitType.Star);
+                    AdminDashboardPanel.Visibility = Visibility.Visible;
                     _ = LoadDoctorsFromApiAsync();
                     _ = LoadPatientsFromApiAsync();
+                    _ = LoadAdminDashboardAsync();
                 }
                 else
                 {
@@ -255,13 +277,15 @@ namespace HRMonitor
                 {
                     try
                     {
-                        var response = await _httpClient.GetAsync("http://localhost:5000/api/doctors");
+                        var response = await _httpClient.PostAsJsonAsync("http://localhost:5000/api/doctors/login", new
+                        {
+                            Username = IdTextBox.Text.Trim(),
+                            Password = PasswordBox.Password
+                        });
                         if (response.IsSuccessStatusCode)
                         {
-                            var doctorsList = await response.Content.ReadFromJsonAsync<List<Doctor>>();
-                            var doc = doctorsList?.FirstOrDefault(d => d.Id == docId && d.Password == PasswordBox.Password);
-                            
-                            if (doc != null)
+                            var login = await response.Content.ReadFromJsonAsync<DoctorLoginResponse>();
+                            if (login != null && login.DoctorId == docId)
                             {
                                 App.LoggedInDoctorId = docId;
                                 LoginGrid.Visibility = Visibility.Collapsed;
@@ -269,6 +293,7 @@ namespace HRMonitor
                                 LoginErrorText.Visibility = Visibility.Collapsed;
                                 DoctorListGrid.Visibility = Visibility.Collapsed;
                                 DoctorListRow.Height = new GridLength(0);
+                                AdminDashboardPanel.Visibility = Visibility.Collapsed;
                                 _ = LoadPatientsFromApiAsync();
                                 return;
                             }
@@ -278,6 +303,21 @@ namespace HRMonitor
                 }
                 LoginErrorText.Visibility = Visibility.Visible;
             }
+        }
+
+        private async Task LoadAdminDashboardAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("http://localhost:5000/api/admin/dashboard");
+                var dashboard = response.IsSuccessStatusCode ? await response.Content.ReadFromJsonAsync<AdminDashboard>() : null;
+                if (dashboard is null) return;
+                TotalPatientsText.Text = dashboard.TotalPatients.ToString();
+                TotalDoctorsText.Text = dashboard.TotalDoctors.ToString();
+                ActiveDevicesText.Text = dashboard.ActiveDevices.ToString();
+                PendingConsultationsText.Text = dashboard.PendingConsultations.ToString();
+            }
+            catch { }
         }
 
         private void PatientListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -449,26 +489,24 @@ namespace HRMonitor
             {
                 // 1. Lưu ConsultationId
                 _currentConsultationId = record.ConsultationId;
+                _isDemoRecord = record.IsDemo;
 
                 RecordDetailTitle.Text = record.Name;
+                HrTextBox.Text = record.HeartRate?.ToString() ?? "--";
+                RmssdTextBox.Text = record.Rmssd?.ToString("F1") ?? "--";
 
-                // Nếu ConsultationId == 0 (Chưa có bệnh nhân nào gửi complaint)
-                if (_currentConsultationId == 0)
-                {
-                    MessageBox.Show("Bệnh nhân chưa gửi yêu cầu khám cho file này!", "Thông báo");
-                    return; // Chặn không cho bác sĩ gửi khuyên
-                }
-
-                // 2. Đổ nội dung
+                // Hiển thị biểu đồ cho cả bản ghi chưa có ca tư vấn để thuận tiện xem minh họa.
                 ComplaintTextBox.Text = string.IsNullOrEmpty(record.PatientComplaint)
-                    ? "Bệnh nhân không có phàn nàn gì."
+                    ? "Chưa có triệu chứng được gửi."
                     : record.PatientComplaint;
 
-                FindingsTextBox.Text = "";
-                TreatmentTextBox.Text = "";
+                FindingsTextBox.Text = record.Findings ?? "";
+                TreatmentTextBox.Text = record.Treatment ?? "";
+                FindingsTextBox.IsReadOnly = !string.IsNullOrEmpty(record.Findings);
+                TreatmentTextBox.IsReadOnly = !string.IsNullOrEmpty(record.Treatment);
 
                 RecordDetailModal.Visibility = Visibility.Visible;
-                PlotEcgData(record.FilePath);
+                PlotEcgData(record.FilePath, record.WaveVariant);
             }
         }
 
@@ -476,6 +514,11 @@ namespace HRMonitor
         {
             // Nếu chưa có ID ca khám thì không làm gì cả
             if (_currentConsultationId == 0) return;
+            if (_isDemoRecord)
+            {
+                MessageBox.Show("Đây là dữ liệu minh họa, không ghi thay đổi vào cơ sở dữ liệu.", "Chế độ minh họa");
+                return;
+            }
 
             // Lấy chữ bác sĩ vừa gõ trên màn hình
             string findings = FindingsTextBox.Text;
@@ -483,7 +526,7 @@ namespace HRMonitor
 
             if (string.IsNullOrWhiteSpace(findings) || string.IsNullOrWhiteSpace(treatment))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ Findings và Treatment!", "Cảnh báo");
+                MessageBox.Show("Vui lòng nhập đầy đủ nhận xét và phác đồ điều trị!", "Cảnh báo");
                 return;
             }
 
@@ -499,10 +542,11 @@ namespace HRMonitor
             RecordDetailModal.Visibility = Visibility.Collapsed;
         }
 
-        private void PlotEcgData(string csvPath)
+        private void PlotEcgData(string csvPath, int waveVariant = 0)
         {
             try
             {
+                double[] ys;
                 if (File.Exists(csvPath))
                 {
                     using (var reader = new StreamReader(csvPath))
@@ -510,39 +554,75 @@ namespace HRMonitor
                     {
                         var records = csv.GetRecords<CsvDataRow>().ToList();
                         int dataCount = Math.Min(1000, records.Count);
-                        double[] ys = new double[dataCount];
-                        double[] xs = new double[dataCount];
+                        ys = new double[dataCount];
 
                         for (int i = 0; i < dataCount; i++)
                         {
                             ys[i] = records[i].oi;
                             // 250Hz sample rate -> 4 seconds for 1000 points
-                            xs[i] = i / 250.0;
                         }
-
-                        EcgPlot.Plot.Clear();
-                        var sig = EcgPlot.Plot.Add.Scatter(xs, ys);
-                        sig.LineWidth = 2;
-                        sig.MarkerSize = 0;
-                        
-                        EcgPlot.Plot.XLabel("Time (s)");
-                        EcgPlot.Plot.YLabel("Voltage (mV)");
-                        EcgPlot.Plot.Axes.Rules.Add(new ScottPlot.AxisRules.MaximumBoundary(
-                            EcgPlot.Plot.Axes.Bottom, 
-                            EcgPlot.Plot.Axes.Left, 
-                            new ScottPlot.AxisLimits(0, 4, -1, 1)));
-                        EcgPlot.Refresh();
                     }
                 }
                 else
                 {
-                    MessageBox.Show("data.csv not found.");
+                    ys = CreateDemoEcgWave(waveVariant);
                 }
+
+                double[] xs = Enumerable.Range(0, ys.Length).Select(index => index / 250.0).ToArray();
+                EcgPlot.Plot.Clear();
+                var signal = EcgPlot.Plot.Add.Scatter(xs, ys);
+                signal.LineWidth = 2;
+                signal.MarkerSize = 0;
+                EcgPlot.Plot.XLabel("Thời gian (giây)");
+                EcgPlot.Plot.YLabel("Điện áp (mV)");
+                EcgPlot.Plot.Axes.SetLimits(0, 4, -0.5, 1.1);
+                EcgPlot.Refresh();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Error loading plot data: " + ex.Message);
+                MessageBox.Show("Lỗi khi tải biểu đồ ECG: " + ex.Message);
             }
+        }
+
+        private static double[] CreateDemoEcgWave(int variant)
+        {
+            var data = new double[1000];
+            double heartRate = 72 + variant * 8;
+            for (int index = 0; index < data.Length; index++)
+            {
+                double phase = ((index / 250.0) * heartRate / 60.0) % 1.0;
+                double pulse(double center, double width, double amplitude) => amplitude * Math.Exp(-Math.Pow((phase - center) / width, 2));
+                data[index] = pulse(.18, .035, .10) + pulse(.39, .012, -.13) + pulse(.42, .016, .88) + pulse(.46, .02, -.25) + pulse(.68, .065, .25) + .015 * Math.Sin(index * .09);
+            }
+            return data;
+        }
+
+        private void Logout_Click(object sender, RoutedEventArgs e)
+        {
+            App.LoggedInDoctorId = 0;
+            isAdminLogin = false;
+            _selectedPatient = null;
+            _selectedDoctor = null;
+            _currentConsultationId = 0;
+            _isDemoRecord = false;
+            Patients.Clear();
+            Doctors.Clear();
+            Records.Clear();
+            RecordDetailModal.Visibility = Visibility.Collapsed;
+            RecordListGrid.Visibility = Visibility.Collapsed;
+            PatientListGrid.Visibility = Visibility.Visible;
+            RightProfilePanel.Visibility = Visibility.Visible;
+            DoctorListGrid.Visibility = Visibility.Collapsed;
+            DoctorListRow.Height = new GridLength(0);
+            AdminDashboardPanel.Visibility = Visibility.Collapsed;
+            ProfileDetailsPanel.Visibility = Visibility.Collapsed;
+            EmptyProfileText.Visibility = Visibility.Visible;
+            IdTextBox.Clear();
+            PasswordBox.Clear();
+            LoginGrid.Visibility = Visibility.Visible;
+            DashboardGrid.Visibility = Visibility.Collapsed;
+            LoginTitleText.Text = "Đăng nhập bác sĩ";
+            RoleToggleBtn.Content = "Đăng nhập quản trị viên";
         }
     }
 
@@ -557,7 +637,7 @@ namespace HRMonitor
         public string Email { get; set; }
         public string Address { get; set; }
         public int? DoctorId { get; set; }
-        public string GenderAgeText => $"{Gender}, {Age} years old";
+        public string GenderAgeText => $"{Gender}, {Age} tuổi";
     }
 
     public class EcgRecord
@@ -566,10 +646,16 @@ namespace HRMonitor
         public string Name { get; set; }
         public string FilePath { get; set; }
         public string Date { get; set; }
+        public int? HeartRate { get; set; }
+        public double? Rmssd { get; set; }
+        public int WaveVariant { get; set; }
+        public bool IsDemo { get; set; }
 
         // Thuộc tính để hứng dữ liệu API
         public int ConsultationId { get; set; }
         public string PatientComplaint { get; set; }
+        public string Findings { get; set; }
+        public string Treatment { get; set; }
     }
 
     public class CsvDataRow
@@ -592,7 +678,21 @@ namespace HRMonitor
         public string Hospital { get; set; }
         public string Email { get; set; }
         public string Address { get; set; }
-        public string Password { get; set; }
+    }
+
+    public class DoctorLoginResponse
+    {
+        public int DoctorId { get; set; }
+        public string FullName { get; set; }
+    }
+
+    public class AdminDashboard
+    {
+        public int TotalPatients { get; set; }
+        public int TotalDoctors { get; set; }
+        public int ActiveDevices { get; set; }
+        public int PendingConsultations { get; set; }
+        public int RespondedConsultations { get; set; }
     }
     
     // Class nhận JSON từ API trả về 
@@ -600,6 +700,8 @@ namespace HRMonitor
     {
         public int EcgId { get; set; }
         public string RecordName { get; set; }
+        public int? NhipTim { get; set; }
+        public double? Rmssd { get; set; }
         public int ConsultationId { get; set; }
         public string Complaint { get; set; }
         public string Findings { get; set; }

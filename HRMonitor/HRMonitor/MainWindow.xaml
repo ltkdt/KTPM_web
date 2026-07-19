@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:HRMonitor"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
-        Title="Patient Monitor" Height="700" Width="1100" WindowStartupLocation="CenterScreen" Background="#F3F2F1" FontFamily="Segoe UI">
+        Title="Theo dõi bệnh nhân" Height="700" Width="1100" WindowStartupLocation="CenterScreen" Background="#F3F2F1" FontFamily="Segoe UI">
     
     <Window.Resources>
         <Style TargetType="Button" x:Key="PrimaryButton">
@@ -80,17 +80,17 @@
         <!-- Login View -->
         <Grid x:Name="LoginGrid" Visibility="Visible" Background="White" Panel.ZIndex="100">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
-                <TextBlock x:Name="LoginTitleText" Text="Doctor Login" Style="{StaticResource HeaderLabel}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock x:Name="LoginTitleText" Text="Đăng nhập Bác sĩ" Style="{StaticResource HeaderLabel}" HorizontalAlignment="Center" Margin="0,0,0,20"/>
                 
-                <TextBlock Text="Account" Margin="0,0,0,5" Foreground="#605E5C"/>
+                <TextBlock Text="Tài Khoản" Margin="0,0,0,5" Foreground="#605E5C"/>
                 <TextBox x:Name="IdTextBox" Margin="0,0,0,15"/>
                 
-                <TextBlock Text="Password" Margin="0,0,0,5" Foreground="#605E5C"/>
+                <TextBlock Text="Mật khẩu" Margin="0,0,0,5" Foreground="#605E5C"/>
                 <PasswordBox x:Name="PasswordBox" Margin="0,0,0,20" Padding="8" BorderBrush="#8A8886" BorderThickness="1"/>
                 
-                <Button Content="Login" Style="{StaticResource PrimaryButton}" Click="Submit_Click"/>
-                <Button x:Name="RoleToggleBtn" Content="Admin login" Style="{StaticResource SecondaryButton}" Margin="0,10,0,0" Click="RoleToggle_Click"/>
-                <TextBlock x:Name="LoginErrorText" Foreground="#A4262C" Margin="0,10,0,0" HorizontalAlignment="Center" Visibility="Collapsed" Text="Invalid ID or password."/>
+                <Button Content="Đăng nhập" Style="{StaticResource PrimaryButton}" Click="Submit_Click"/>
+                <Button x:Name="RoleToggleBtn" Content="Đăng nhập Quản trị viên" Style="{StaticResource SecondaryButton}" Margin="0,10,0,0" Click="RoleToggle_Click"/>
+                <TextBlock x:Name="LoginErrorText" Foreground="#A4262C" Margin="0,10,0,0" HorizontalAlignment="Center" Visibility="Collapsed" Text="ID hoặc mật khẩu không đúng."/>
             </StackPanel>
         </Grid>
 
@@ -116,7 +116,15 @@
                     </Grid.RowDefinitions>
                     
                     <Border Padding="30,20,30,0">
-                        <TextBlock Text="Patient List" Foreground="#323130" FontSize="28" FontWeight="SemiBold"/>
+                        <StackPanel>
+                            <TextBlock Text="Danh sách bệnh nhân" Foreground="#323130" FontSize="28" FontWeight="SemiBold"/>
+                            <WrapPanel x:Name="AdminDashboardPanel" Visibility="Collapsed" Margin="0,15,0,5">
+                                <Border Background="White" CornerRadius="6" Padding="12" Margin="0,0,10,0"><StackPanel><TextBlock Text="Bệnh nhân" Foreground="#605E5C"/><TextBlock x:Name="TotalPatientsText" Text="0" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+                                <Border Background="White" CornerRadius="6" Padding="12" Margin="0,0,10,0"><StackPanel><TextBlock Text="Bác sĩ" Foreground="#605E5C"/><TextBlock x:Name="TotalDoctorsText" Text="0" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+                                <Border Background="White" CornerRadius="6" Padding="12" Margin="0,0,10,0"><StackPanel><TextBlock Text="Thiết bị ECG hoạt động" Foreground="#605E5C"/><TextBlock x:Name="ActiveDevicesText" Text="0" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+                                <Border Background="#FFF4CE" CornerRadius="6" Padding="12"><StackPanel><TextBlock Text="Ca chờ tư vấn" Foreground="#605E5C"/><TextBlock x:Name="PendingConsultationsText" Text="0" FontSize="24" FontWeight="Bold"/></StackPanel></Border>
+                            </WrapPanel>
+                        </StackPanel>
                     </Border>
 
                     <ListView x:Name="PatientListView" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="20" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="PatientListView_SelectionChanged">
@@ -159,7 +167,7 @@
                     </Grid.RowDefinitions>
                     
                     <Border Padding="30,20,30,0">
-                        <TextBlock Text="Doctor List" Foreground="#323130" FontSize="28" FontWeight="SemiBold"/>
+                        <TextBlock Text="Danh sách bác sĩ" Foreground="#323130" FontSize="28" FontWeight="SemiBold"/>
                     </Border>
 
                     <ListView x:Name="DoctorListView" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="20" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="DoctorListView_SelectionChanged">
@@ -206,8 +214,8 @@
                     </Grid.RowDefinitions>
                     
                     <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="20">
-                        <Button Content="← Back to Patients" Style="{StaticResource SecondaryButton}" Click="BackToPatients_Click"/>
-                        <TextBlock Text="Records (15 total)" Style="{StaticResource HeaderLabel}" Margin="20,0,0,0" VerticalAlignment="Center"/>
+                        <Button Content="← Quay lại danh sách bệnh nhân" Style="{StaticResource SecondaryButton}" Click="BackToPatients_Click"/>
+                        <TextBlock Text="Bản ghi ECG" Style="{StaticResource HeaderLabel}" Margin="20,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                     
                     <Grid Grid.Row="1" Margin="20,0,20,10">
@@ -217,8 +225,8 @@
                             <ColumnDefinition Width="100"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="ID" FontWeight="Bold" Foreground="#323130" Grid.Column="0" Margin="15,0,0,0"/>
-                        <TextBlock Text="Name" FontWeight="Bold" Foreground="#323130" Grid.Column="1"/>
-                        <TextBlock Text="Actions" FontWeight="Bold" Foreground="#323130" Grid.Column="2" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Tên bản ghi" FontWeight="Bold" Foreground="#323130" Grid.Column="1"/>
+                        <TextBlock Text="Thao tác" FontWeight="Bold" Foreground="#323130" Grid.Column="2" HorizontalAlignment="Center"/>
                     </Grid>
                     <Border Grid.Row="1" BorderBrush="#E1DFDD" BorderThickness="0,0,0,1" Margin="20,25,20,0"/>
 
@@ -244,7 +252,7 @@
                                         <TextBlock Text="{Binding Name}" Foreground="#323130" Margin="0,0,10,0"/>
                                         <TextBlock Text="{Binding Date}" Foreground="#8A8886"/>
                                     </StackPanel>
-                                    <Button Content="View" Style="{StaticResource PrimaryButton}" Grid.Column="2" Padding="15,6" Click="ViewRecordDetail_Click" Tag="{Binding}"/>
+                                    <Button Content="Xem" Style="{StaticResource PrimaryButton}" Grid.Column="2" Padding="15,6" Click="ViewRecordDetail_Click" Tag="{Binding}"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -252,9 +260,9 @@
 
                     <Border Grid.Row="3" BorderBrush="#E1DFDD" BorderThickness="0,1,0,0" Padding="20">
                         <Grid>
-                            <Button Content="Previous" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Padding="15,6"/>
-                            <TextBlock Text="Page 1 of 2" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#605E5C"/>
-                            <Button Content="Next" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Padding="15,6"/>
+                            <Button Content="Trước" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Left" Padding="15,6"/>
+                            <TextBlock Text="Trang 1 / 2" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#605E5C"/>
+                            <Button Content="Sau" Style="{StaticResource SecondaryButton}" HorizontalAlignment="Right" Padding="15,6"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -270,7 +278,10 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     
-                    <TextBlock Text="Detailed Info" Style="{StaticResource HeaderLabel}" Grid.Row="0" Margin="0,0,0,20"/>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,20">
+                        <Button Content="Đăng xuất" Style="{StaticResource SecondaryButton}" DockPanel.Dock="Right" Click="Logout_Click"/>
+                        <TextBlock Text="Thông tin chi tiết" Style="{StaticResource HeaderLabel}"/>
+                    </DockPanel>
                     
                     <StackPanel x:Name="ProfileDetailsPanel" Grid.Row="1" Visibility="Collapsed">
                         <Border Background="White" CornerRadius="8" Padding="20">
@@ -283,7 +294,7 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Name" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Họ tên" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="ProfileName" Grid.Column="1" Foreground="#323130" FontSize="16" TextWrapping="Wrap"/>
                                 </Grid>
                                 
@@ -292,7 +303,7 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Age" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Tuổi" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="ProfileAge" Grid.Column="1" Foreground="#323130" FontSize="16"/>
                                 </Grid>
                                 
@@ -301,7 +312,7 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Gender" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Giới tính" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="ProfileGender" Grid.Column="1" Foreground="#323130" FontSize="16"/>
                                 </Grid>
 
@@ -310,7 +321,7 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Phone number" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Số điện thoại" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <TextBlock x:Name="ProfilePhone" Grid.Column="1" Foreground="#323130" FontSize="16"/>
                                 </Grid>
                                 
@@ -328,7 +339,7 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Address" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Top"/>
+                                    <TextBlock Text="Địa chỉ" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Top"/>
                                     <TextBlock x:Name="ProfileAddress" Grid.Column="1" Foreground="#323130" FontSize="16" TextWrapping="Wrap"/>
                                 </Grid>
                                 
@@ -337,17 +348,17 @@
                                         <ColumnDefinition Width="120"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Assigned Doctor" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Bác sĩ phụ trách" Foreground="#605E5C" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                     <ComboBox x:Name="AssignDoctorComboBox" Grid.Column="1" DisplayMemberPath="FullName" SelectedValuePath="Id" SelectionChanged="AssignDoctorComboBox_SelectionChanged" />
                                 </Grid>
                                 
-                                <Button x:Name="ViewRecordsFromProfileBtn" Content="View Records" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0" HorizontalAlignment="Left" Click="ViewRecordFromProfile_Click"/>
-                                <Button x:Name="DeleteAccountBtn" Content="Delete Account" Style="{StaticResource PrimaryButton}" Background="#A4262C" Margin="0,10,0,0" HorizontalAlignment="Left" Click="DeleteAccountBtn_Click" Visibility="Collapsed"/>
+                                <Button x:Name="ViewRecordsFromProfileBtn" Content="Xem bản ghi" Style="{StaticResource PrimaryButton}" Margin="0,20,0,0" HorizontalAlignment="Left" Click="ViewRecordFromProfile_Click"/>
+                                <Button x:Name="DeleteAccountBtn" Content="Xóa tài khoản" Style="{StaticResource PrimaryButton}" Background="#A4262C" Margin="0,10,0,0" HorizontalAlignment="Left" Click="DeleteAccountBtn_Click" Visibility="Collapsed"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
                     
-                    <TextBlock x:Name="EmptyProfileText" Grid.Row="1" Text="Select a patient to view their profile." Foreground="#A19F9D" HorizontalAlignment="Center" Margin="0,50,0,0"/>
+                    <TextBlock x:Name="EmptyProfileText" Grid.Row="1" Text="Chọn một bệnh nhân để xem hồ sơ." Foreground="#A19F9D" HorizontalAlignment="Center" Margin="0,50,0,0"/>
                 </Grid>
             </Border>
         </Grid>
@@ -375,7 +386,7 @@
                     <!-- Indicators -->
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
                         <StackPanel Margin="0,0,30,0">
-                            <TextBlock Text="Heart rate (bpm)" Foreground="#605E5C" HorizontalAlignment="Center" Margin="0,0,0,5"/>
+                            <TextBlock Text="Nhịp tim (bpm)" Foreground="#605E5C" HorizontalAlignment="Center" Margin="0,0,0,5"/>
                             <TextBox x:Name="HrTextBox" IsReadOnly="True" Width="100" TextAlignment="Center" FontWeight="SemiBold" Foreground="#323130" Background="#FAFAFA" Text="60.3"/>
                         </StackPanel>
                         <StackPanel>
@@ -398,23 +409,23 @@
                         </Grid.ColumnDefinitions>
                         
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Complaint" Foreground="#605E5C" Margin="0,0,0,5"/>
+                            <TextBlock Text="Triệu chứng" Foreground="#605E5C" Margin="0,0,0,5"/>
                             <TextBox x:Name="ComplaintTextBox" TextWrapping="Wrap" AcceptsReturn="True" Height="80" IsReadOnly="True" Background="#FAFAFA" Text="Cảm thấy mệt và hụt hơi sau khi chạy liên tục khoảng 20 phút, kèm theo nhịp tim tăng nhanh hơn bình thường."/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="1" Margin="10,0,10,0">
-                            <TextBlock Text="Findings" Foreground="#605E5C" Margin="0,0,0,5"/>
+                            <TextBlock Text="Nhận xét" Foreground="#605E5C" Margin="0,0,0,5"/>
                             <TextBox x:Name="FindingsTextBox" TextWrapping="Wrap" AcceptsReturn="True" Height="80" Text="Nhịp tim tăng (sinus tachycardia) sau gắng sức, không ghi nhận bất thường rõ rệt về ST-T. Không có dấu hiệu thiếu máu cơ tim cấp. Nhịp đều, trục tim bình thường."/>
                         </StackPanel>
                         
                         <StackPanel Grid.Column="2" Margin="10,0,0,0">
-                            <TextBlock Text="Treatment plan" Foreground="#605E5C" Margin="0,0,0,5"/>
+                            <TextBlock Text="Phác đồ điều trị" Foreground="#605E5C" Margin="0,0,0,5"/>
                             <TextBox x:Name="TreatmentTextBox" TextWrapping="Wrap" AcceptsReturn="True" Height="80" Text="Khuyến nghị nghỉ ngơi và theo dõi thêm. Uống đủ nước, điều chỉnh cường độ tập luyện phù hợp. Nếu triệu chứng tái diễn hoặc kèm đau ngực/chóng mặt, cần tái khám để làm thêm các xét nghiệm (ECG gắng sức, siêu âm tim)."/>
                         </StackPanel>
                     </Grid>
                     
                     <!-- Submit Button -->
-                    <Button Grid.Row="4" Content="Submit" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,20,0,0" Padding="30,10" Click="SubmitFeedback_Click"/>
+                    <Button Grid.Row="4" Content="Gửi phản hồi" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" Margin="0,20,0,0" Padding="30,10" Click="SubmitFeedback_Click"/>
                 </Grid>
             </Border>
         </Grid>
